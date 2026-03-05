@@ -32,13 +32,16 @@
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
       margin: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: radial-gradient(circle at top, #1d293b 0, #020617 40%, #020617 100%);
       color: var(--text);
       display: flex;
-      min-height: 100vh;
       overflow: hidden;
     }
 
@@ -208,7 +211,9 @@
       margin-left: 260px;
       padding: 20px 26px 28px;
       flex: 1;
+      height: 100vh;
       overflow-y: auto;
+      overflow-x: hidden;
       color: var(--text);
     }
 
@@ -1005,10 +1010,7 @@
           </div>
         </div>
 
-        <div class="inline-hint">
-          <span class="hint-dot"></span>
-          <span>列名映射可在「设置」卡片中调整，适配不同点点导出模板。</span>
-        </div>
+
 
         <div class="flex-row" style="margin-top:10px;">
           <div class="card" style="flex:1;min-width:220px;">
@@ -1024,38 +1026,7 @@
             </div>
           </div>
 
-          <div class="card" style="flex:1;min-width:220px;">
-            <div class="card-header">
-              <span>列名映射（适配点点导出表头）</span>
-              <span class="badge badge-accent">如有变动，可在此自定义</span>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;font-size:11px;">
-              <div>
-                <label>关键词列名</label>
-                <input id="map-keyword" type="text" value="关键词" />
-              </div>
-              <div>
-                <label>搜索指数列名</label>
-                <input id="map-search-index" type="text" value="搜索指数" />
-              </div>
-              <div>
-                <label>排名列名</label>
-                <input id="map-rank" type="text" value="排名" />
-              </div>
-              <div>
-                <label>流行度列名</label>
-                <input id="map-popularity" type="text" value="流行度" />
-              </div>
-              <div>
-                <label>品牌词标记列名（可选）</label>
-                <input id="map-brand" type="text" value="品牌词" placeholder="如：品牌词（是/否）" />
-              </div>
-              <div>
-                <label>品牌标记值（视表格）</label>
-                <input id="map-brand-yes" type="text" value="是" placeholder="标记为品牌词的单元格值" />
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
     </section>
@@ -1386,23 +1357,24 @@
   document.addEventListener('DOMContentLoaded', () => {
     // -------- 基础状态 --------
     const state = {
-      apps: [], // { name, rows: [{ keyword, searchIndex, rank, popularity, isBrand }] }
-      filtered: [], // 同结构，已按当前筛选条件过滤
-      combinedKeywords: [], // 聚合好用于展示与文案
+      apps: [],      // 已导入的竞品（展示用）
+      rawApps: [],   // 原始数据副本，筛选永远从这里读，不会被污染
+      filtered: [],
+      combinedKeywords: [],
       currentTab: 'all',
       tableSort: { key: null, direction: 'asc' },
-      tagKeywords: [], // Keywords Tag 编辑器中的词根
+      tagKeywords: [],
     };
 
-    // 列名映射读取
+    // 列名硬编码（点点数据标准表头）
     function getColumnMap() {
       return {
-        keyword: document.getElementById('map-keyword').value.trim() || '关键词',
-        searchIndex: document.getElementById('map-search-index').value.trim() || '搜索指数',
-        rank: document.getElementById('map-rank').value.trim() || '排名',
-        popularity: document.getElementById('map-popularity').value.trim() || '流行度',
-        brand: document.getElementById('map-brand').value.trim(),
-        brandYes: document.getElementById('map-brand-yes').value.trim(),
+        keyword: '关键词',
+        searchIndex: '搜索指数',
+        rank: '排名',
+        popularity: '流行度',
+        brand: '品牌词',
+        brandYes: '是',
       };
     }
 
@@ -1575,21 +1547,24 @@
             processed++;
             if (processed === files.length) {
               if (!apps.length) {
-                setImportStatus('warn', '解析失败或表头不匹配，请检查列名映射');
+                setImportStatus('warn', '解析失败，请确认文件为点点数据导出的标准格式');
                 return;
               }
               // 同名竞品去重，已存在则覆盖更新
               apps.forEach(newApp => {
+                // apps（展示）和 rawApps（原始备份）同步更新
+                const deepCopy = app => ({ ...app, rows: app.rows.map(r => ({ ...r })) });
                 const existIdx = state.apps.findIndex(a => a.name === newApp.name);
                 if (existIdx >= 0) {
-                  state.apps[existIdx] = newApp; // 覆盖
+                  state.apps[existIdx] = newApp;
+                  state.rawApps[existIdx] = deepCopy(newApp);
                 } else {
                   state.apps.push(newApp);
+                  state.rawApps.push(deepCopy(newApp));
                 }
               });
               renderImportedApps();
               setImportStatus('ok', `已导入 ${state.apps.length} 个竞品`);
-              console.log('[handleFiles] 导入完成，竞品数:', state.apps.length, '，首个竞品行数:', state.apps[0]?.rows?.length);
             }
           }
         };
@@ -1614,6 +1589,7 @@
         del.style.cssText = 'font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid rgba(249,115,115,0.4);background:rgba(249,115,115,0.1);color:#f97373;cursor:pointer;';
         del.addEventListener('click', () => {
           state.apps.splice(idx, 1);
+          state.rawApps.splice(idx, 1);
           renderImportedApps();
           setImportStatus('ok', `已导入 ${state.apps.length} 个竞品`);
         });
@@ -1645,7 +1621,6 @@
     btnApplyFilters.addEventListener('click', applyFilters);
 
     function applyFilters() {
-      console.log('[applyFilters] 开始，state.apps:', state.apps.length, '个竞品');
       if (!state.apps.length) {
         alert('请先导入至少一个竞品的 .xlsx 关键词数据。');
         return;
@@ -1661,7 +1636,8 @@
       const brandMode = filterBrand.value;
       const sortMode = filterSort.value;
 
-      const filteredApps = state.apps.map(app => {
+      // 始终从原始数据过滤，避免多次筛选相互影响
+      const filteredApps = state.rawApps.map(app => {
         const rows = app.rows.filter(row => {
           if (row.searchIndex < minSearchIndex) return false;
           if (row.rank > maxRank) return false;
@@ -1699,8 +1675,14 @@
 
       state.filtered = filteredApps;
       state.currentTab = 'all';
+      state.tableSort = { key: null, direction: 'asc' };
       buildCombinedKeywords();
       renderResults();
+      // 自动滚动到结果区域
+      const resultsSection = document.getElementById('section-results');
+      if (resultsSection) {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     // 聚合关键词，用于下方列表与文案生成
@@ -1743,7 +1725,6 @@
 
     function renderResults() {
       const total = state.filtered.reduce((sum, app) => sum + app.rows.length, 0);
-      console.log('[renderResults] total:', total, 'filtered apps:', state.filtered.length);
       if (!total) {
         summaryCount.textContent = '当前筛选下暂无符合条件的关键词';
         resultsWrapper.style.display = 'none';
