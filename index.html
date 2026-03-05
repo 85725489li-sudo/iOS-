@@ -2090,17 +2090,16 @@
 请严格按以下 JSON 格式返回，不输出任何其他内容：
 {"title":"优化后 Title（≤30字符）","subtitle":"优化后 Subtitle（≤30字符）","explain":"Title和Subtitle选词逻辑说明，100字以内"}`;
 
-      const userMsg = `产品 Title：${title}
-${subtitle ? `当前 Subtitle：${subtitle}` : '（未填写 Subtitle，请帮我创作）'}
-${notes ? `补充说明：${notes}` : ''}
-${extra ? `额外关键词参考：${extra}` : ''}
-${currentKw ? `当前 Keywords（已由本地生成）：${currentKw}` : ''}
-${kwPool ? `
-竞品关键词数据池：
-${kwPool}` : '
-（暂无竞品关键词数据）'}
-
-请优化 Title 和 Subtitle，并说明选词理由。`;
+      const userMsg = [
+        '产品 Title：' + title,
+        subtitle ? '当前 Subtitle：' + subtitle : '（未填写 Subtitle，请帮我创作）',
+        notes ? '补充说明：' + notes : '',
+        extra ? '额外关键词参考：' + extra : '',
+        currentKw ? '当前 Keywords（已由本地生成）：' + currentKw : '',
+        kwPool ? '\n竞品关键词数据池：\n' + kwPool : '\n（暂无竞品关键词数据）',
+        '',
+        '请优化 Title 和 Subtitle，并说明选词理由。'
+      ].filter(Boolean).join('\n');
 
       try {
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
