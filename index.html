@@ -2,32 +2,52 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ASO 关键词分析与文案生成工具</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- SheetJS：如需完全离线，可下载到本地并改为 ./xlsx.full.min.js -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
     :root {
       --bg: #050816;
       --bg-alt: #0b1120;
+      --bg-soft: #111827;
       --accent: #38bdf8;
       --accent-soft: rgba(56, 189, 248, 0.15);
+      --accent-strong: #0ea5e9;
+      --danger: #f97373;
+      --success: #22c55e;
+      --warning: #fbbf24;
       --text: #e5e7eb;
       --text-muted: #9ca3af;
       --border: #1f2937;
       --radius-lg: 14px;
       --radius-md: 10px;
-      --danger: #f97373;
-      --success: #22c55e;
+      --radius-pill: 999px;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.85);
+      --shadow-subtle: 0 10px 30px rgba(15, 23, 42, 0.6);
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: radial-gradient(circle at top, #1d293b 0, #020617 40%, #020617 100%);
       color: var(--text);
       display: flex;
       min-height: 100vh;
+      overflow: hidden;
     }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* 左侧导航栏 */
     .sidebar {
       width: 260px;
       background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.97));
@@ -40,549 +60,2200 @@
       z-index: 20;
       backdrop-filter: blur(18px);
     }
-    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
     .logo-badge {
-      width: 32px; height: 32px; border-radius: 12px;
-      background: radial-gradient(circle at 30% 0, #bae6fd 0, #0ea5e9 23%, #1d4ed8 70%);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; color: #0f172a; font-size: 16px;
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      background: radial-gradient(circle at 30% 0, #bae6fd 0, #0ea5e9 23%, #1d4ed8 70%, #020617 100%);
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.45), 0 0 35px rgba(56, 189, 248, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 16px;
     }
-    .logo-text-main { font-weight: 600; font-size: 16px; }
-    .logo-text-sub { font-size: 12px; color: var(--text-muted); }
+
+    .logo-text-main {
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      font-size: 16px;
+    }
+
+    .logo-text-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
     .sidebar-section-title {
-      margin: 14px 0 6px; font-size: 11px; text-transform: uppercase;
-      letter-spacing: 0.16em; color: var(--text-muted);
+      margin: 14px 0 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
     }
-    .nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+    .nav-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nav-item {
+      display: flex;
+    }
+
     .nav-link {
-      display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px;
-      font-size: 13px; color: var(--text-muted); cursor: pointer;
-      border: 1px solid transparent; background: none; color: inherit; width: 100%; text-align: left;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: 1px solid transparent;
       transition: all 0.16s ease-out;
     }
-    .nav-link:hover { background: rgba(30, 64, 175, 0.55); color: var(--text); }
-    .nav-link.active { background: rgba(56, 189, 248, 0.15); color: #e5f2ff; border-color: rgba(129, 140, 248, 0.8); }
+
+    .nav-link span.icon {
+      width: 18px;
+      display: inline-flex;
+      justify-content: center;
+      opacity: 0.8;
+    }
+
+    .nav-link:hover {
+      background: rgba(30, 64, 175, 0.55);
+      border-color: rgba(129, 140, 248, 0.4);
+      color: var(--text);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.22), 0 10px 25px rgba(15, 23, 42, 0.9);
+      transform: translateY(-0.5px);
+    }
+
+    .nav-link.active {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(59, 130, 246, 0.2));
+      border-color: rgba(129, 140, 248, 0.8);
+      color: #e5f2ff;
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3), 0 12px 32px rgba(15, 23, 42, 0.95);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(15, 23, 42, 0.8);
+      padding-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      font-size: 11px;
+    }
+
+    .chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+    }
+
     .btn-sop {
-      margin-top: 8px; padding: 7px 10px; border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.5); background: rgba(15, 23, 42, 0.98);
-      font-size: 12px; color: var(--text); cursor: pointer;
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.98));
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.16s ease-out;
     }
-    .btn-sop:hover { border-color: rgba(56, 189, 248, 0.9); }
+
+    .btn-sop:hover {
+      border-color: rgba(56, 189, 248, 0.9);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8), 0 12px 32px rgba(15, 23, 42, 0.98);
+      transform: translateY(-0.5px);
+    }
+
+    /* 右侧主内容区 */
     .main {
-      margin-left: 260px; padding: 20px 26px 28px; flex: 1; overflow-y: auto;
+      margin-left: 260px;
+      padding: 20px 26px 28px;
+      flex: 1;
+      overflow-y: auto;
+      color: var(--text);
     }
+
     .section {
-      margin-bottom: 26px; padding: 18px; border-radius: var(--radius-lg);
-      background: radial-gradient(circle at top left, rgba(30, 64, 175, 0.55) 0, rgba(15, 23, 42, 0.98) 36%);
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+      margin-bottom: 26px;
+      padding: 18px 18px 16px;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(circle at top left, rgba(30, 64, 175, 0.55) 0, rgba(15, 23, 42, 0.98) 36%, rgba(15, 23, 42, 0.98) 100%);
+      box-shadow: var(--shadow-soft);
       border: 1px solid rgba(148, 163, 184, 0.4);
+      position: relative;
     }
-    .section-title { font-size: 17px; font-weight: 600; }
-    .section-step { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-muted); }
-    .section-desc, .small-help { font-size: 12px; color: var(--text-muted); }
-    .dropzone {
-      border-radius: var(--radius-md); border: 1px dashed rgba(148, 163, 184, 0.7);
-      background: rgba(56, 189, 248, 0.08); padding: 12px 14px;
-      display: flex; align-items: center; justify-content: space-between; gap: 18px;
-      cursor: pointer; transition: all 0.18s ease-out;
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    .dropzone:hover { border-color: rgba(59, 130, 246, 0.9); }
-    .dropzone.dragover { border-color: rgba(34, 197, 94, 0.95); }
-    input[type="text"], input[type="number"], textarea, select {
-      width: 100%; background: rgba(15, 23, 42, 0.98); border-radius: 8px;
-      border: 1px solid rgba(55, 65, 81, 0.85); padding: 7px 9px; color: var(--text);
-      font-size: 13px; outline: none; font-family: inherit;
+
+    .section-title {
+      font-size: 17px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    textarea { min-height: 68px; resize: vertical; }
-    label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block; }
-    .btn {
-      border-radius: 999px; padding: 6px 11px; border: 1px solid rgba(148, 163, 184, 0.85);
-      background: rgba(15, 23, 42, 0.98); color: var(--text); font-size: 12px;
-      display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+
+    .section-step {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
     }
-    .btn-primary { border-color: rgba(56, 189, 248, 0.9); background: linear-gradient(90deg, rgba(56, 189, 248, 0.3), rgba(59, 130, 246, 0.4)); color: #e0f2fe; }
-    .btn-ghost { background: rgba(15, 23, 42, 0.9); }
-    .btn-xs { padding: 3px 8px; font-size: 11px; }
+
+    .section-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pill {
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .section-body {
+      margin-top: 2px;
+      font-size: 13px;
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
     .card {
-      background: rgba(15, 23, 42, 0.92); border-radius: var(--radius-md);
-      border: 1px solid rgba(51, 65, 85, 0.9); padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.92);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      padding: 10px 12px;
+      box-shadow: var(--shadow-subtle);
     }
-    .card-header { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
+    .card-header {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .badge-accent {
+      border-color: rgba(56, 189, 248, 0.9);
+      color: #e0f2fe;
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    /* 输入控件统一样式 */
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.98);
+      border-radius: 8px;
+      border: 1px solid rgba(55, 65, 81, 0.85);
+      padding: 7px 9px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.16s ease-out;
+      font-family: inherit;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: rgba(148, 163, 184, 0.75);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(56, 189, 248, 0.9);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.9), 0 0 0 1px rgba(15, 23, 42, 1);
+    }
+
+    textarea {
+      min-height: 68px;
+      resize: vertical;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .small-help {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* 上传区域 */
+    .dropzone {
+      position: relative;
+      border-radius: var(--radius-md);
+      border: 1px dashed rgba(148, 163, 184, 0.7);
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.1), rgba(15, 23, 42, 0.96));
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      cursor: pointer;
+      transition: all 0.18s ease-out;
+    }
+
+    .dropzone:hover {
+      border-style: solid;
+      border-color: rgba(59, 130, 246, 0.9);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8), 0 15px 35px rgba(15, 23, 42, 0.98);
+      transform: translateY(-1px);
+    }
+
+    .dropzone.dragover {
+      border-color: rgba(34, 197, 94, 0.95);
+      background: radial-gradient(circle at top, rgba(34, 197, 94, 0.2), rgba(15, 23, 42, 0.98));
+    }
+
+    .dropzone-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .dropzone-title {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .dropzone-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .dropzone-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 6px 11px;
+      border: 1px solid rgba(148, 163, 184, 0.85);
+      background: rgba(15, 23, 42, 0.98);
+      color: var(--text);
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      border-color: rgba(56, 189, 248, 0.9);
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.3), rgba(59, 130, 246, 0.4));
+      color: #e0f2fe;
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4), 0 10px 30px rgba(15, 23, 42, 0.95);
+    }
+
+    .btn-ghost {
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .btn-xs {
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+
+    .btn:hover {
+      transform: translateY(-0.5px);
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.95);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.7), 0 14px 35px rgba(15, 23, 42, 1);
+    }
+
+    /* 状态 pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: var(--text-muted);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
+    }
+
+    .status-pill.ok {
+      border-color: rgba(34, 197, 94, 0.9);
+      color: #bbf7d0;
+      background: rgba(22, 101, 52, 0.35);
+    }
+
+    .status-pill.warn {
+      border-color: rgba(250, 204, 21, 0.95);
+      color: #fef9c3;
+      background: rgba(161, 98, 7, 0.5);
+    }
+
+    /* 筛选条件布局 */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    /* 结果 tabs */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
     .tab {
-      padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.7);
-      font-size: 12px; cursor: pointer; color: var(--text-muted); background: rgba(15, 23, 42, 0.9);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text-muted);
+      background: rgba(15, 23, 42, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    .tab.active { border-color: rgba(56, 189, 248, 0.9); color: #e0f2fe; background: rgba(56, 189, 248, 0.2); }
-    .table-wrapper { max-height: 280px; overflow: auto; border-radius: 10px; border: 1px solid rgba(51, 65, 85, 0.98); }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { padding: 6px 9px; border-bottom: 1px solid rgba(31, 41, 55, 0.95); }
-    th { text-align: left; font-weight: 500; font-size: 11px; color: var(--text-muted); cursor: pointer; }
-    tr:hover { background: rgba(30, 64, 175, 0.6); }
+
+    .tab.active {
+      border-color: rgba(56, 189, 248, 0.9);
+      color: #e0f2fe;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.26), rgba(37, 99, 235, 0.3));
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.9), 0 10px 25px rgba(15, 23, 42, 0.98);
+    }
+
+    .tab-counter {
+      font-size: 11px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: var(--text-muted);
+    }
+
+    /* 表格 */
+    .table-wrapper {
+      max-height: 280px;
+      overflow: auto;
+      border-radius: 10px;
+      border: 1px solid rgba(51, 65, 85, 0.98);
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 1));
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: rgba(15, 23, 42, 0.98);
+      z-index: 2;
+    }
+
+    th,
+    td {
+      padding: 6px 9px;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.95);
+      white-space: nowrap;
+    }
+
+    th {
+      text-align: left;
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+    }
+
+    th.sortable:hover {
+      color: #e5f2ff;
+    }
+
+    th .sort-indicator {
+      margin-left: 4px;
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    tr:nth-child(even) {
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    tr:hover {
+      background: rgba(30, 64, 175, 0.6);
+      color: #e5f2ff;
+    }
+
+    .keyword-cell {
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    /* 关键词列表（可点击复制） */
+    .keyword-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
     .keyword-chip {
-      padding: 3px 8px; border-radius: 999px; background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.7); font-size: 11px; cursor: pointer;
-      display: inline-block; margin: 4px 4px 4px 0;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 11px;
+      color: var(--text);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
     }
-    .keyword-chip:hover { border-color: rgba(56, 189, 248, 0.9); }
+
+    .keyword-chip:hover {
+      border-color: rgba(56, 189, 248, 0.9);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.9), 0 9px 24px rgba(15, 23, 42, 1);
+      transform: translateY(-0.5px);
+    }
+
+    .keyword-chip[data-copied="true"] {
+      border-color: rgba(34, 197, 94, 0.98);
+      background: rgba(22, 163, 74, 0.45);
+    }
+
     .keyword-tooltip {
-      position: absolute; left: 50%; bottom: 130%; transform: translateX(-50%);
-      white-space: nowrap; background: rgba(15, 23, 42, 0.98); border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.85); padding: 5px 8px; font-size: 11px;
+      position: absolute;
+      left: 50%;
+      bottom: 130%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      background: rgba(15, 23, 42, 0.98);
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.85);
+      padding: 5px 8px;
+      font-size: 11px;
+      color: var(--text-muted);
       z-index: 10;
+      box-shadow: 0 12px 35px rgba(15, 23, 42, 1);
     }
-    .tag-editor { background: rgba(15, 23, 42, 0.96); border-radius: var(--radius-md); border: 1px solid rgba(51, 65, 85, 0.98); padding: 10px; }
-    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
+
+    /* 文案生成区 */
+    .field-group {
+      margin-bottom: 10px;
+    }
+
+    .char-counter {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 3px;
+      gap: 8px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(30, 64, 175, 0.8);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 1);
+    }
+
+    .progress-bar-inner {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+      width: 0%;
+      transition: width 0.15s ease-out;
+    }
+
+    .output-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .output-box {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(51, 65, 85, 0.98);
+      padding: 9px 10px;
+      font-size: 13px;
+      min-height: 52px;
+      position: relative;
+    }
+
+    .output-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    /* Keywords Tag 编辑器 */
+    .tag-editor {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(51, 65, 85, 0.98);
+      padding: 10px;
+      margin-top: 4px;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 32px;
+    }
+
     .tag {
-      display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px;
-      font-size: 11px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(148, 163, 184, 0.85);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.85);
+      color: var(--text);
     }
-    .tag-remove { cursor: pointer; }
-    .progress-bar { width: 100%; height: 6px; border-radius: 999px; background: rgba(30, 64, 175, 0.8); overflow: hidden; }
-    .progress-bar-inner { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444); width: 0%; transition: width 0.15s; }
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; z-index: 50; }
-    .modal-backdrop.show { display: flex; }
+
+    .tag-remove {
+      cursor: pointer;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .tag-remove:hover {
+      opacity: 1;
+      color: var(--danger);
+    }
+
+    .tag-input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .tag-input-row input[type="text"] {
+      flex: 1;
+    }
+
+    .tag-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tag-toolbar-left,
+    .tag-toolbar-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .keywords-counter-text {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .keywords-counter-text span.value {
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    /* SOP 弹窗 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.96));
+      backdrop-filter: blur(14px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
     .modal {
-      width: min(860px, 100% - 48px); max-height: 80vh; border-radius: 18px;
-      background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(148, 163, 184, 0.6);
-      padding: 16px 18px; overflow-y: auto;
+      width: min(860px, 100% - 48px);
+      max-height: 80vh;
+      border-radius: 18px;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      box-shadow: 0 26px 60px rgba(15, 23, 42, 1);
+      padding: 16px 18px 15px;
+      display: flex;
+      flex-direction: column;
     }
-    .modal-section { margin-bottom: 10px; padding: 9px; border-radius: 12px; background: rgba(15, 23, 42, 0.95); }
-    .modal-section-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-    .modal-section ul { margin: 0; padding-left: 16px; color: var(--text-muted); }
-    @media (max-width: 900px) { .sidebar { display: none; } .main { margin-left: 0; } }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-body {
+      overflow-y: auto;
+      padding-right: 6px;
+      font-size: 13px;
+    }
+
+    .modal-section {
+      margin-bottom: 10px;
+      padding: 9px 9px 7px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(51, 65, 85, 0.9);
+    }
+
+    .modal-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #e5e7eb;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .modal-section-title span.index {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .modal-section ul {
+      margin: 0;
+      padding-left: 16px;
+      color: var(--text-muted);
+    }
+
+    .modal-section li {
+      margin-bottom: 3px;
+    }
+
+    /* 提示条 */
+    .inline-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .hint-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.9);
+    }
+
+    /* 小屏适配 */
+    @media (max-width: 900px) {
+      .sidebar {
+        display: none;
+      }
+      .main {
+        margin-left: 0;
+        padding: 14px 12px 18px;
+      }
+      .section {
+        padding: 12px 11px 11px;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- 左侧导航 -->
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-badge">ASO</div>
       <div>
         <div class="logo-text-main">Keyword Studio</div>
-        <div class="logo-text-sub">App Store US · 本地运行</div>
+        <div class="logo-text-sub">App Store US · Offline</div>
       </div>
     </div>
-    <div class="sidebar-section-title">工作流</div>
+
+    <div class="sidebar-section-title">Workflow</div>
     <ul class="nav-list">
-      <li><button class="nav-link active" data-target="section-import">① 导入竞品关键词</button></li>
-      <li><button class="nav-link" data-target="section-filters">② 筛选条件设置</button></li>
-      <li><button class="nav-link" data-target="section-results">③ 结果分析与汇总</button></li>
-      <li><button class="nav-link" data-target="section-copy">④ ASO 文案生成</button></li>
+      <li class="nav-item">
+        <button class="nav-link active" data-target="section-import">
+          <span class="icon">①</span>
+          <span>导入竞品关键词</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-target="section-filters">
+          <span class="icon">②</span>
+          <span>筛选条件设置</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-target="section-results">
+          <span class="icon">③</span>
+          <span>结果分析与汇总</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-target="section-copy">
+          <span class="icon">④</span>
+          <span>ASO 文案生成</span>
+        </button>
+      </li>
     </ul>
-    <div class="sidebar-footer" style="margin-top:auto; padding-top:8px; border-top:1px solid rgba(0,0,0,0.2);">
-      <button id="btn-open-sop" class="btn-sop">📖 ASO 规则手册</button>
+
+    <div class="sidebar-section-title">Shortcuts</div>
+    <ul class="nav-list">
+      <li class="nav-item">
+        <button class="nav-link" data-target="section-copy">
+          <span class="icon">⏱</span>
+          <span>快速进入文案区</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-target="section-results">
+          <span class="icon">⭐</span>
+          <span>查看高价值词</span>
+        </button>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <div class="chip">
+        <span class="chip-dot"></span>
+        <span>本地运行 · 无需登录</span>
+      </div>
+      <button id="btn-open-sop" class="btn-sop">
+        <span>📖 ASO 规则手册</span>
+      </button>
+      <div style="font-size:11px;color:var(--text-muted);">
+        先在上方按步骤完成导入与筛选，再在「ASO 文案生成」中调词与复制。
+      </div>
     </div>
   </aside>
 
+  <!-- 主内容 -->
   <main class="main">
+    <!-- ① 导入 -->
     <section id="section-import" class="section">
-      <div class="section-step">STEP 1 · 导入</div>
-      <div class="section-title">导入点点数据（.xlsx 竞品关键词）</div>
-      <p class="section-desc">支持多竞品、拖拽批量导入。每个文件代表一个竞品。</p>
-      <div class="dropzone" id="dropzone">
-        <div>拖拽多个 .xlsx 到此处，或点击下方按钮选择文件</div>
-        <button id="btn-file-select" class="btn btn-primary">选择 .xlsx 文件</button>
-        <input id="file-input" type="file" accept=".xlsx,.xls" multiple style="display:none" />
+      <div class="section-header">
+        <div>
+          <div class="section-step">STEP 1 · IMPORT</div>
+          <div class="section-title">导入点点数据（.xlsx 竞品关键词）</div>
+        </div>
+        <div class="pill">
+          <span class="pill-dot"></span>
+          <span>支持多竞品 · 拖拽批量导入</span>
+        </div>
       </div>
-      <div style="margin-top:10px;">
-        <div class="card">
-          <div class="card-header">列名映射（适配点点导出表头）</div>
-          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; font-size:12px;">
-            <div><label>关键词列名</label><input id="map-keyword" type="text" value="关键词" /></div>
-            <div><label>搜索指数列名</label><input id="map-search-index" type="text" value="搜索指数" /></div>
-            <div><label>排名列名</label><input id="map-rank" type="text" value="排名" /></div>
-            <div><label>流行度列名</label><input id="map-popularity" type="text" value="流行度" /></div>
-            <div><label>品牌词列名（可选）</label><input id="map-brand" type="text" value="品牌词" placeholder="如：品牌词" /></div>
-            <div><label>品牌标记值</label><input id="map-brand-yes" type="text" value="是" /></div>
+      <div class="section-body">
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-main">
+            <div class="dropzone-title">拖拽多个 .xlsx 到此处，或点击选择文件</div>
+            <div class="dropzone-sub">
+              每个文件代表一个竞品 · 表头格式请与点点数据导出保持一致。
+            </div>
+            <div class="dropzone-badge-row">
+              <span class="badge">示例：US · iOS · 关键词榜单</span>
+              <span class="badge">每次分析竞品不限数量</span>
+            </div>
+          </div>
+          <div>
+            <button id="btn-file-select" class="btn btn-primary">
+              <span>选择 .xlsx 文件</span>
+            </button>
+            <input
+              id="file-input"
+              type="file"
+              accept=".xlsx,.xls"
+              multiple
+              style="display:none"
+            />
           </div>
         </div>
-        <div id="imported-list" style="margin-top:8px; font-size:12px; color: var(--text-muted);">暂无数据，请先导入 .xlsx 文件。</div>
-      </div>
-    </section>
 
-    <section id="section-filters" class="section">
-      <div class="section-step">STEP 2 · 筛选</div>
-      <div class="section-title">关键词筛选条件（全部满足才纳入结果）</div>
-      <div class="filter-grid" style="margin-top:10px;">
-        <div><label>搜索指数 ≥</label><input id="filter-search-index" type="number" value="5000" min="0" /></div>
-        <div><label>排名 ≤</label><input id="filter-rank" type="number" value="10" min="1" /></div>
-        <div><label>流行度 ≥</label><input id="filter-popularity" type="number" value="5" min="0" /></div>
-        <div><label>关键词包含（可选，逗号分隔）</label><input id="filter-contains" type="text" placeholder="如：vpn, proxy" /></div>
-        <div><label>品牌词筛选</label>
-          <select id="filter-brand">
-            <option value="all">全部</option>
-            <option value="nonbrand">仅非品牌词</option>
-            <option value="brand">仅品牌词</option>
-          </select>
+        <div class="inline-hint">
+          <span class="hint-dot"></span>
+          <span>列名映射可在「设置」卡片中调整，适配不同点点导出模板。</span>
         </div>
-        <div><label>排序方式</label>
-          <select id="filter-sort">
-            <option value="searchIndex-desc">搜索指数 高→低</option>
-            <option value="rank-asc">排名 好→差</option>
-            <option value="popularity-desc">流行度 高→低</option>
-          </select>
-        </div>
-      </div>
-      <div style="margin-top:10px;">
-        <button id="btn-apply-filters" class="btn btn-primary">应用筛选</button>
-        <button id="btn-reset-filters" class="btn btn-ghost btn-xs">重置为默认</button>
-      </div>
-    </section>
 
-    <section id="section-results" class="section">
-      <div class="section-step">STEP 3 · 结果</div>
-      <div class="section-title">分析结果（点击表头可排序，点击关键词可复制）</div>
-      <div class="card" style="margin-top:10px;">
-        <div id="tabs" class="tabs"></div>
-        <div id="results-table-wrapper" class="table-wrapper" style="display:none;"></div>
-        <div id="no-results" style="padding:8px; color: var(--text-muted);">请先导入数据并应用筛选。</div>
-        <div class="card-header" style="margin-top:10px;">高价值关键词列表（悬停看详情）</div>
-        <div id="keyword-list" class="keyword-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
-      </div>
-    </section>
+        <div class="flex-row" style="margin-top:10px;">
+          <div class="card" style="flex:1;min-width:220px;">
+            <div class="card-header">
+              <span>已导入竞品</span>
+              <span id="import-status" class="status-pill">
+                <span class="status-dot"></span>
+                <span>等待导入</span>
+              </span>
+            </div>
+            <div id="imported-list" style="font-size:12px;color:var(--text-muted);min-height:34px;">
+              暂无数据，请先导入点点导出的 .xlsx 文件。
+            </div>
+          </div>
 
-    <section id="section-copy" class="section">
-      <div class="section-step">STEP 4 · 文案</div>
-      <div class="section-title">ASO 文案生成（Title / Subtitle / Keywords）</div>
-      <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:10px;">
-        <div class="card" style="flex:1; min-width:280px;">
-          <div class="card-header">输入端</div>
-          <div><label>Title（≤30 字符）</label><input id="input-title" type="text" placeholder="产品标题" /></div>
-          <div class="char-counter" style="font-size:11px; color: var(--text-muted);"><span id="counter-title-text">0 / 30</span><div class="progress-bar"><div id="counter-title-bar" class="progress-bar-inner"></div></div></div>
-          <div style="margin-top:8px;"><label>Subtitle（≤30 字符）</label><input id="input-subtitle" type="text" placeholder="副标题" /></div>
-          <div class="char-counter" style="font-size:11px;"><span id="counter-subtitle-text">0 / 30</span><div class="progress-bar"><div id="counter-subtitle-bar" class="progress-bar-inner"></div></div></div>
-          <div style="margin-top:8px;"><label>补充说明（可选）</label><textarea id="input-notes" placeholder="目标用户/场景/卖点"></textarea></div>
-          <div style="margin-top:8px;"><label>额外关键词（逗号分隔）</label><input id="input-extra-keywords" type="text" placeholder="如：unlimited, secure" /></div>
-          <div style="margin-top:8px;"><label>禁用词（品牌/竞品/类别名，逗号分隔）</label><input id="input-banned" type="text" placeholder="如：netflix, app, game" /></div>
-          <button id="btn-generate-copy" class="btn btn-primary" style="margin-top:10px;">根据筛选结果生成 ASO 文案</button>
-        </div>
-        <div class="card" style="flex:1; min-width:280px;">
-          <div class="card-header">输出端</div>
-          <div><label>Title</label><div id="output-title" class="card" style="min-height:36px;"></div><button data-copy-target="output-title" class="btn btn-ghost btn-xs">复制</button></div>
-          <div style="margin-top:8px;"><label>Subtitle</label><div id="output-subtitle" class="card" style="min-height:36px;"></div><button data-copy-target="output-subtitle" class="btn btn-ghost btn-xs">复制</button></div>
-          <div style="margin-top:8px;"><label>Keywords（≤100 字符）</label>
-            <div class="tag-editor">
-              <div id="tag-list" class="tag-list"></div>
-              <div style="display:flex; gap:6px; margin-top:8px;"><input id="tag-input" type="text" placeholder="输入词根回车添加" /><button id="btn-add-tag" class="btn btn-ghost btn-xs">添加</button></div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:11px;">
-                <span>长度：<span id="keywords-len">0</span> / 100</span>
-                <span><button id="btn-sort-tags" class="btn btn-ghost btn-xs">按长度排序</button><button id="btn-dedupe-tags" class="btn btn-ghost btn-xs">去重</button><button id="btn-clear-tags" class="btn btn-ghost btn-xs">清空</button><button id="btn-copy-keywords" class="btn btn-primary btn-xs">复制 Keywords</button></span>
+          <div class="card" style="flex:1;min-width:220px;">
+            <div class="card-header">
+              <span>列名映射（适配点点导出表头）</span>
+              <span class="badge badge-accent">如有变动，可在此自定义</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;font-size:11px;">
+              <div>
+                <label>关键词列名</label>
+                <input id="map-keyword" type="text" value="关键词" />
               </div>
-              <div class="progress-bar" style="margin-top:6px;"><div id="keywords-progress-bar" class="progress-bar-inner"></div></div>
+              <div>
+                <label>搜索指数列名</label>
+                <input id="map-search-index" type="text" value="搜索指数" />
+              </div>
+              <div>
+                <label>排名列名</label>
+                <input id="map-rank" type="text" value="排名" />
+              </div>
+              <div>
+                <label>流行度列名</label>
+                <input id="map-popularity" type="text" value="流行度" />
+              </div>
+              <div>
+                <label>品牌词标记列名（可选）</label>
+                <input id="map-brand" type="text" value="品牌词" placeholder="如：品牌词（是/否）" />
+              </div>
+              <div>
+                <label>品牌标记值（视表格）</label>
+                <input id="map-brand-yes" type="text" value="是" placeholder="标记为品牌词的单元格值" />
+              </div>
             </div>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- ② 筛选 -->
+    <section id="section-filters" class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-step">STEP 2 · FILTER</div>
+          <div class="section-title">设置 ASO 关键词筛选条件</div>
+        </div>
+        <div class="pill">
+          <span class="pill-dot"></span>
+          <span>满足全部条件才会进入结果</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="filter-grid">
+          <div>
+            <label>搜索指数 ≥</label>
+            <input id="filter-search-index" type="number" value="5000" min="0" />
+            <div class="small-help">默认 5000，可根据品类强弱微调。</div>
+          </div>
+          <div>
+            <label>排名 ≤</label>
+            <input id="filter-rank" type="number" value="10" min="1" />
+            <div class="small-help">默认 10，偏重已验证的强势词。</div>
+          </div>
+          <div>
+            <label>流行度 ≥</label>
+            <input id="filter-popularity" type="number" value="5" min="0" />
+            <div class="small-help">默认 5，过滤掉过冷的小众词。</div>
+          </div>
+          <div>
+            <label>关键词包含（可选）</label>
+            <input
+              id="filter-contains"
+              type="text"
+              placeholder="如：vpn, proxy（英文逗号分隔，为空则不限制）"
+            />
+          </div>
+          <div>
+            <label>品牌词筛选</label>
+            <select id="filter-brand">
+              <option value="all">不过滤 · 全部关键词</option>
+              <option value="nonbrand">仅保留「非品牌词」</option>
+              <option value="brand">仅查看「品牌词」</option>
+            </select>
+          </div>
+          <div>
+            <label>排序方式</label>
+            <select id="filter-sort">
+              <option value="searchIndex-desc">搜索指数（高→低）</option>
+              <option value="rank-asc">排名（好→差）</option>
+              <option value="popularity-desc">流行度（高→低）</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button id="btn-apply-filters" class="btn btn-primary">
+            <span>应用筛选条件</span>
+          </button>
+          <button id="btn-reset-filters" class="btn btn-ghost btn-xs">
+            <span>重置为默认推荐</span>
+          </button>
+          <div class="inline-hint">
+            <span class="hint-dot"></span>
+            <span>点击「应用」后，在结果区可按竞品 / 全部切换查看高价值词。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ③ 结果 -->
+    <section id="section-results" class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-step">STEP 3 · INSIGHT</div>
+          <div class="section-title">关键词分析结果与高价值词清单</div>
+        </div>
+        <div class="pill">
+          <span class="pill-dot"></span>
+          <span>点击表头支持二次排序 · 点击关键词可一键复制</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="card" style="margin-bottom:10px;">
+          <div class="card-header">
+            <span>结果概览</span>
+            <span id="summary-count" class="badge">暂未生成结果</span>
+          </div>
+          <div>
+            <div id="tabs" class="tabs"></div>
+            <div id="results-table-wrapper" class="table-wrapper" style="display:none;"></div>
+            <div id="no-results" style="font-size:12px;color:var(--text-muted);padding:6px 0;">
+              还没有结果，请先导入数据并在上一步应用筛选条件。
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span>ASO 高价值关键词清单（可点击复制）</span>
+            <span class="badge">悬停查看：搜索指数 / 流行度 / 排名 / 竞品</span>
+          </div>
+          <div id="keyword-list" class="keyword-list">
+            <span style="font-size:12px;color:var(--text-muted);">
+              生成结果后，这里会展示去重后的高价值关键词列表。
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 文案生成 -->
+    <section id="section-copy" class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-step">STEP 4 · CREATIVE</div>
+          <div class="section-title">ASO 文案生成 · Title / Subtitle / Keywords</div>
+        </div>
+        <div class="pill">
+          <span class="pill-dot"></span>
+          <span>内置苹果硬规则 · 优先利用关键词根词填满 100 字符</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="flex-row">
+          <div class="card" style="flex:1.2;min-width:260px;">
+            <div class="card-header">
+              <span>输入端</span>
+              <span class="badge badge-accent">建议先完成上方关键词筛选，再生成文案</span>
+            </div>
+            <div>
+              <div class="field-group">
+                <label>产品标题 Title（≤ 30 字符）</label>
+                <input id="input-title" type="text" placeholder="示例：Fast VPN - Secure Proxy" />
+                <div class="char-counter">
+                  <span id="counter-title-text">0 / 30</span>
+                  <div class="progress-bar">
+                    <div id="counter-title-bar" class="progress-bar-inner"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label>副标题 Subtitle（≤ 30 字符）</label>
+                <input id="input-subtitle" type="text" placeholder="示例：Private browser & wifi guard" />
+                <div class="char-counter">
+                  <span id="counter-subtitle-text">0 / 30</span>
+                  <div class="progress-bar">
+                    <div id="counter-subtitle-bar" class="progress-bar-inner"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label>补充说明（可选）</label>
+                <textarea
+                  id="input-notes"
+                  placeholder="描述目标用户 / 使用场景 / 卖点，例如：面向出海用户，强调安全、隐私和高速连接。"
+                ></textarea>
+              </div>
+
+              <div class="field-group">
+                <label>额外补充关键词（可选 · 逗号分隔）</label>
+                <input
+                  id="input-extra-keywords"
+                  type="text"
+                  placeholder="例如：unlimited, hotspot, shield"
+                />
+                <div class="small-help">AI 选词时会一并纳入备选词，但仍会遵守苹果规则与长度限制。</div>
+              </div>
+
+              <div class="field-group">
+                <label>品牌 / 禁用词（逗号分隔，仅用于剔除）</label>
+                <input
+                  id="input-banned"
+                  type="text"
+                  placeholder="填入自身品牌 + 竞品品牌 + 类别名，如：netflix, youtube, social, game"
+                />
+                <div class="small-help">
+                  所有出现在此处的词将不会进入 Keywords 字段，避免触碰品牌或误导性词汇红线。
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+                <button id="btn-generate-copy" class="btn btn-primary">
+                  <span id="btn-generate-label">⚡ 本地生成 Keywords</span>
+                </button>
+                <button id="btn-ai-optimize" class="btn btn-primary" style="background:linear-gradient(135deg,#6366f1,#4f46e5);">
+                  <span id="btn-ai-label">✦ AI 优化 Title / Subtitle</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="flex:1.2;min-width:260px;">
+            <div class="card-header">
+              <span>输出端</span>
+              <span class="badge">保持 Title / Subtitle 自然可读 · Keywords 以词根为主</span>
+            </div>
+            <div>
+              <div class="output-grid">
+                <div>
+                  <label>Title</label>
+                  <div id="output-title" class="output-box"></div>
+                  <div class="output-actions">
+                    <button data-copy-target="output-title" class="btn btn-ghost btn-xs">复制 Title</button>
+                  </div>
+                </div>
+                <div>
+                  <label>Subtitle</label>
+                  <div id="output-subtitle" class="output-box"></div>
+                  <div class="output-actions">
+                    <button data-copy-target="output-subtitle" class="btn btn-ghost btn-xs">复制 Subtitle</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:10px;">
+                <label>Keywords（≤ 100 字符 · 逗号分隔 · 无空格）</label>
+                <div class="tag-editor">
+                  <div id="tag-list" class="tag-list"></div>
+
+                  <div class="tag-input-row">
+                    <input
+                      id="tag-input"
+                      type="text"
+                      placeholder="输入单个词根，如：vpn，回车或点击添加"
+                    />
+                    <button id="btn-add-tag" class="btn btn-ghost btn-xs">添加</button>
+                  </div>
+
+                  <div class="tag-toolbar">
+                    <div class="tag-toolbar-left">
+                      <button id="btn-sort-tags" class="btn btn-ghost btn-xs">按长度排序</button>
+                      <button id="btn-dedupe-tags" class="btn btn-ghost btn-xs">去重</button>
+                      <button id="btn-clear-tags" class="btn btn-ghost btn-xs">清空</button>
+                    </div>
+                    <div class="tag-toolbar-right">
+                      <span id="keywords-counter-text" class="keywords-counter-text">
+                        Keywords 长度：<span class="value">0</span> / 100
+                      </span>
+                      <button id="btn-copy-keywords" class="btn btn-primary btn-xs">复制 Keywords</button>
+                    </div>
+                  </div>
+
+                  <div class="progress-bar" style="margin-top:6px;">
+                    <div id="keywords-progress-bar" class="progress-bar-inner"></div>
+                  </div>
+                  <div class="small-help">
+                    自动生成时，会<strong>优先填写高价值词根</strong>，自动排除 Title / Subtitle 中已有词，以及 App、类别、品牌等违规类关键词。
+                  </div>
+                </div>
+
+                <div class="card" style="margin-top:8px;" id="ai-explain-card">
+                  <div class="card-header">
+                    <span>AI 说明</span>
+                  </div>
+                  <div id="ai-explain-content" style="font-size:12px;color:var(--text-muted);line-height:1.8;">
+                    点击「✦ AI 优化 Title / Subtitle」后，这里会显示 AI 的优化建议与选词说明。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div> <!-- card -->
+        </div>
+      </div>
+    </section>
   </main>
 
+  <!-- 规则手册弹窗 -->
   <div id="modal-sop" class="modal-backdrop">
     <div class="modal">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <strong>📖 ASO 规则手册</strong>
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📖 ASO 规则手册</span>
+          <span style="font-size:11px;color:var(--text-muted);">App Store US · 内部 SOP</span>
+        </div>
         <button id="btn-close-sop" class="btn btn-ghost btn-xs">关闭</button>
       </div>
-      <div class="modal-section">
-        <div class="modal-section-title">第一章 格式法则</div>
-        <ul><li>Title ≤30、Subtitle ≤30、Keywords ≤100 字符。</li><li>Keywords 逗号分隔，不加空格。三处不重复。</li></ul>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">第二章 高阶技巧</div>
-        <ul><li>拆词法、免费关键词、单数形式。</li><li>本地化 Hack：适度加入 usa、wifi 等。</li></ul>
-      </div>
-      <div class="modal-section">
-        <div class="modal-section-title">第三章 避坑指南</div>
-        <ul><li>严禁竞品品牌名。不填 App、iPhone、类别名、开发者名。</li><li>Title 必须自然可读，不堆词。</li></ul>
+      <div class="modal-body">
+        <div class="modal-section">
+          <div class="modal-section-title">
+            <span class="index">CH.01</span>
+            <span>格式法则</span>
+          </div>
+          <ul>
+            <li>Title ≤ 30 字符，Subtitle ≤ 30 字符，Keywords ≤ 100 字符。</li>
+            <li>Keywords 仅用英文逗号分隔，不加空格，不用顿号 / 句号等其它标点。</li>
+            <li>Title / Subtitle / Keywords 三处内容尽量不重复同一组关键短语，避免浪费权重。</li>
+            <li>Keywords 中以词根为主（如 vpn, proxy, secure），交由苹果算法自动组合长尾词。</li>
+          </ul>
+        </div>
+
+        <div class="modal-section">
+          <div class="modal-section-title">
+            <span class="index">CH.02</span>
+            <span>高阶技巧</span>
+          </div>
+          <ul>
+            <li>拆词法：将「vpn secure proxy」拆为 vpn / secure / proxy 3 个词根，提升组合覆盖率。</li>
+            <li>免费关键词：合理利用 free / unlimited / fast 等词，但避免堆砌夸大承诺。</li>
+            <li>本地化 Hack：在 US 地区适度加入 city / usa / wifi / hotspot 等语义词，提升本土相关性。</li>
+            <li>单数优先：英文尽量使用单数形式（game 而非 games），留更多字符给其它词根。</li>
+          </ul>
+        </div>
+
+        <div class="modal-section">
+          <div class="modal-section-title">
+            <span class="index">CH.03</span>
+            <span>避坑指南</span>
+          </div>
+          <ul>
+            <li>严禁出现竞品品牌名（如 netflix、tiktok 等），避免品牌侵权与审核失败。</li>
+            <li>不填 App / iPhone / iPad / 类别名（如 game、social）以及开发者名。</li>
+            <li>避免误导性词汇（如 official、best、#1 等），会增加被驳回或降权风险。</li>
+            <li>Title 必须自然可读，像真实产品名，不要堆砌一长串关键词。</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    var state = { apps: [], filtered: [], combinedKeywords: [], currentTab: 'all', tableSort: { key: null, direction: 'asc' }, tagKeywords: [] };
+    // -------- 基础状态 --------
+    const state = {
+      apps: [], // { name, rows: [{ keyword, searchIndex, rank, popularity, isBrand }] }
+      filtered: [], // 同结构，已按当前筛选条件过滤
+      combinedKeywords: [], // 聚合好用于展示与文案
+      currentTab: 'all',
+      tableSort: { key: null, direction: 'asc' },
+      tagKeywords: [], // Keywords Tag 编辑器中的词根
+    };
 
+    // 列名映射读取
     function getColumnMap() {
       return {
-        keyword: (document.getElementById('map-keyword').value || '关键词').trim(),
-        searchIndex: (document.getElementById('map-search-index').value || '搜索指数').trim(),
-        rank: (document.getElementById('map-rank').value || '排名').trim(),
-        popularity: (document.getElementById('map-popularity').value || '流行度').trim(),
-        brand: (document.getElementById('map-brand').value || '').trim(),
-        brandYes: (document.getElementById('map-brand-yes').value || '是').trim()
+        keyword: document.getElementById('map-keyword').value.trim() || '关键词',
+        searchIndex: document.getElementById('map-search-index').value.trim() || '搜索指数',
+        rank: document.getElementById('map-rank').value.trim() || '排名',
+        popularity: document.getElementById('map-popularity').value.trim() || '流行度',
+        brand: document.getElementById('map-brand').value.trim(),
+        brandYes: document.getElementById('map-brand-yes').value.trim(),
       };
     }
 
-    document.querySelectorAll('.nav-link').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var targetId = btn.getAttribute('data-target');
+    // -------- 导航滚动 --------
+    Array.from(document.querySelectorAll('.nav-link')).forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
         if (targetId) {
-          var el = document.getElementById(targetId);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const el = document.getElementById(targetId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         }
-        document.querySelectorAll('.nav-link').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       });
     });
 
-    document.getElementById('btn-open-sop').onclick = function() { document.getElementById('modal-sop').classList.add('show'); };
-    document.getElementById('btn-close-sop').onclick = function() { document.getElementById('modal-sop').classList.remove('show'); };
-    document.getElementById('modal-sop').onclick = function(e) { if (e.target.id === 'modal-sop') e.target.classList.remove('show'); };
+    // -------- SOP 弹窗 --------
+    const modalSop = document.getElementById('modal-sop');
+    document.getElementById('btn-open-sop').addEventListener('click', () => {
+      modalSop.classList.add('show');
+    });
+    document.getElementById('btn-close-sop').addEventListener('click', () => {
+      modalSop.classList.remove('show');
+    });
+    modalSop.addEventListener('click', (e) => {
+      if (e.target === modalSop) {
+        modalSop.classList.remove('show');
+      }
+    });
 
-    var fileInput = document.getElementById('file-input');
-    document.getElementById('btn-file-select').onclick = function() { fileInput.click(); };
-    document.getElementById('dropzone').ondragover = function(e) { e.preventDefault(); this.classList.add('dragover'); };
-    document.getElementById('dropzone').ondragleave = function() { this.classList.remove('dragover'); };
-    document.getElementById('dropzone').ondrop = function(e) {
-      e.preventDefault();
-      this.classList.remove('dragover');
-      var files = [].slice.call(e.dataTransfer.files || []).filter(function(f) { return /\.xlsx?$/i.test(f.name); });
-      if (files.length) handleFiles(files);
-    };
-    fileInput.onchange = function() {
-      var files = [].slice.call(this.files || []);
-      if (files.length) { handleFiles(files); this.value = ''; }
-    };
+    // -------- 文件导入与解析 --------
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const btnFileSelect = document.getElementById('btn-file-select');
+    const importedList = document.getElementById('imported-list');
+    const importStatus = document.getElementById('import-status');
+
+    function setImportStatus(type, text) {
+      importStatus.classList.remove('ok', 'warn');
+      if (type === 'ok') importStatus.classList.add('ok');
+      if (type === 'warn') importStatus.classList.add('warn');
+      importStatus.querySelector('span:nth-child(2)').textContent = text;
+    }
+
+    btnFileSelect.addEventListener('click', () => fileInput.click());
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ;['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (eventName !== 'drop') {
+          dropzone.classList.remove('dragover');
+        }
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      dropzone.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files || []).filter(f => /(\.xlsx|\.xls)$/i.test(f.name));
+      if (!files.length) return;
+      handleFiles(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      handleFiles(files);
+      fileInput.value = '';
+    });
 
     function handleFiles(files) {
-      if (!window.XLSX) { alert('请联网加载 XLSX 库，或本地引用 xlsx.full.min.js'); return; }
-      var colMap = getColumnMap();
-      var apps = [];
-      var processed = 0;
-      files.forEach(function(file) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
+      if (!window.XLSX) {
+        alert('未加载 XLSX 解析库，请检查网络或改为本地引用 xlsx.full.min.js。');
+        return;
+      }
+      const colMap = getColumnMap();
+      const apps = [];
+      let processed = 0;
+
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
           try {
-            var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            var json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-            var rows = json.map(function(row) {
-              var keyword = String(row[colMap.keyword] || '').trim();
-              var searchIndex = Number(row[colMap.searchIndex] || 0);
-              var rank = Number(row[colMap.rank] || 999999);
-              var popularity = Number(row[colMap.popularity] || 0);
-              var isBrand = false;
-              if (colMap.brand && String(row[colMap.brand] || '').trim() === colMap.brandYes) isBrand = true;
-              return { keyword: keyword, searchIndex: searchIndex, rank: rank, popularity: popularity, isBrand: isBrand };
-            }).filter(function(r) { return r.keyword; });
-            if (rows.length) apps.push({ name: file.name.replace(/\.xlsx?$/i, ''), rows: rows });
-          } catch (err) { console.error(err); }
-          processed++;
-          if (processed === files.length) {
-            state.apps = state.apps.concat(apps);
-            document.getElementById('imported-list').innerHTML = state.apps.length ? state.apps.map(function(a) { return a.name + ' · ' + a.rows.length + ' 条'; }).join('<br/>') : '暂无数据，请先导入 .xlsx 文件。';
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type: 'array' });
+            const sheetName = wb.SheetNames[0];
+            const sheet = wb.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+            const rows = json.map(row => {
+              const keyword = String(row[colMap.keyword] || '').trim();
+              const searchIndex = Number(row[colMap.searchIndex] || 0);
+              const rank = Number(row[colMap.rank] || 999999);
+              const popularity = Number(row[colMap.popularity] || 0);
+              let isBrand = false;
+              if (colMap.brand) {
+                const val = String(row[colMap.brand] || '').trim();
+                if (colMap.brandYes && val === colMap.brandYes) {
+                  isBrand = true;
+                }
+              }
+              return { keyword, searchIndex, rank, popularity, isBrand };
+            }).filter(r => r.keyword);
+
+            if (rows.length) {
+              apps.push({
+                name: file.name.replace(/\.(xlsx|xls)$/i, ''),
+                rows,
+              });
+            }
+          } catch (err) {
+            console.error('解析失败', err);
+          } finally {
+            processed++;
+            if (processed === files.length) {
+              if (!apps.length) {
+                setImportStatus('warn', '解析失败或表头不匹配，请检查列名映射');
+                return;
+              }
+              // 同名竞品去重，已存在则覆盖更新
+              apps.forEach(newApp => {
+                const existIdx = state.apps.findIndex(a => a.name === newApp.name);
+                if (existIdx >= 0) {
+                  state.apps[existIdx] = newApp; // 覆盖
+                } else {
+                  state.apps.push(newApp);
+                }
+              });
+              renderImportedApps();
+              setImportStatus('ok', `已导入 ${state.apps.length} 个竞品`);
+            }
           }
         };
         reader.readAsArrayBuffer(file);
       });
     }
 
-    document.getElementById('btn-reset-filters').onclick = function() {
-      document.getElementById('filter-search-index').value = 5000;
-      document.getElementById('filter-rank').value = 10;
-      document.getElementById('filter-popularity').value = 5;
-      document.getElementById('filter-contains').value = '';
-      document.getElementById('filter-brand').value = 'all';
-      document.getElementById('filter-sort').value = 'searchIndex-desc';
-    };
-
-    document.getElementById('btn-apply-filters').onclick = function() {
-      if (!state.apps.length) { alert('请先导入至少一个竞品的 .xlsx 数据。'); return; }
-      var minSearch = Number(document.getElementById('filter-search-index').value || 0);
-      var maxRank = Number(document.getElementById('filter-rank').value || Infinity);
-      var minPop = Number(document.getElementById('filter-popularity').value || 0);
-      var containsRaw = (document.getElementById('filter-contains').value || '').toLowerCase().split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-      var brandMode = document.getElementById('filter-brand').value;
-      var sortMode = document.getElementById('filter-sort').value;
-
-      state.filtered = state.apps.map(function(app) {
-        var rows = app.rows.filter(function(row) {
-          if (row.searchIndex < minSearch || row.rank > maxRank || row.popularity < minPop) return false;
-          if (containsRaw.length && !containsRaw.some(function(str) { return row.keyword.toLowerCase().indexOf(str) !== -1; })) return false;
-          if (brandMode === 'nonbrand' && row.isBrand) return false;
-          if (brandMode === 'brand' && !row.isBrand) return false;
-          return true;
-        }).slice();
-        if (sortMode === 'searchIndex-desc') rows.sort(function(a, b) { return (b.searchIndex || 0) - (a.searchIndex || 0); });
-        else if (sortMode === 'rank-asc') rows.sort(function(a, b) { return (a.rank || 999999) - (b.rank || 999999); });
-        else if (sortMode === 'popularity-desc') rows.sort(function(a, b) { return (b.popularity || 0) - (a.popularity || 0); });
-        return { name: app.name, rows: rows };
-      });
-
-      var map = {};
-      state.filtered.forEach(function(app) {
-        app.rows.forEach(function(row) {
-          var k = row.keyword.toLowerCase();
-          if (!map[k]) map[k] = { keyword: row.keyword, searchIndex: row.searchIndex || 0, popularity: row.popularity || 0, rank: row.rank || 999999, apps: [] };
-          map[k].searchIndex = Math.max(map[k].searchIndex, row.searchIndex || 0);
-          map[k].popularity = Math.max(map[k].popularity, row.popularity || 0);
-          map[k].rank = Math.min(map[k].rank, row.rank || 999999);
-          if (map[k].apps.indexOf(app.name) === -1) map[k].apps.push(app.name);
-        });
-      });
-      state.combinedKeywords = Object.keys(map).map(function(k) { return map[k]; });
-      state.currentTab = 'all';
-      renderResults();
-    };
-
-    function renderResults() {
-      var total = state.filtered.reduce(function(sum, app) { return sum + app.rows.length; }, 0);
-      var tabsEl = document.getElementById('tabs');
-      var wrapper = document.getElementById('results-table-wrapper');
-      var noRes = document.getElementById('no-results');
-      var kwList = document.getElementById('keyword-list');
-
-      if (!total) {
-        wrapper.style.display = 'none';
-        wrapper.innerHTML = '';
-        noRes.style.display = 'block';
-        noRes.textContent = '请先导入数据并应用筛选。';
-        kwList.innerHTML = '';
+    function renderImportedApps() {
+      if (!state.apps.length) {
+        importedList.innerHTML = '暂无数据，请先导入点点导出的 .xlsx 文件。';
         return;
       }
-      noRes.style.display = 'none';
+      importedList.innerHTML = '';
+      state.apps.forEach((app, idx) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:6px 10px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:8px;';
+        const info = document.createElement('span');
+        info.style.fontSize = '12px';
+        info.textContent = `${app.name} · ${app.rows.length} 条`;
+        const del = document.createElement('button');
+        del.textContent = '移除';
+        del.style.cssText = 'font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid rgba(249,115,115,0.4);background:rgba(249,115,115,0.1);color:#f97373;cursor:pointer;';
+        del.addEventListener('click', () => {
+          state.apps.splice(idx, 1);
+          renderImportedApps();
+          setImportStatus('ok', `已导入 ${state.apps.length} 个竞品`);
+        });
+        div.appendChild(info);
+        div.appendChild(del);
+        importedList.appendChild(div);
+      });
+    }
 
-      tabsEl.innerHTML = '';
-      var allBtn = document.createElement('button');
-      allBtn.className = 'tab' + (state.currentTab === 'all' ? ' active' : '');
-      allBtn.textContent = '全部竞品 (' + total + ')';
-      allBtn.onclick = function() { state.currentTab = 'all'; renderResults(); };
-      tabsEl.appendChild(allBtn);
-      state.filtered.forEach(function(app) {
-        var tb = document.createElement('button');
-        tb.className = 'tab' + (state.currentTab === app.name ? ' active' : '');
-        tb.textContent = app.name + ' (' + app.rows.length + ')';
-        tb.onclick = function() { state.currentTab = app.name; renderResults(); };
-        tabsEl.appendChild(tb);
+    // -------- 筛选逻辑 --------
+    const filterSearchIndex = document.getElementById('filter-search-index');
+    const filterRank = document.getElementById('filter-rank');
+    const filterPopularity = document.getElementById('filter-popularity');
+    const filterContains = document.getElementById('filter-contains');
+    const filterBrand = document.getElementById('filter-brand');
+    const filterSort = document.getElementById('filter-sort');
+    const btnApplyFilters = document.getElementById('btn-apply-filters');
+    const btnResetFilters = document.getElementById('btn-reset-filters');
+
+    btnResetFilters.addEventListener('click', () => {
+      filterSearchIndex.value = 5000;
+      filterRank.value = 10;
+      filterPopularity.value = 5;
+      filterContains.value = '';
+      filterBrand.value = 'all';
+      filterSort.value = 'searchIndex-desc';
+    });
+
+    btnApplyFilters.addEventListener('click', applyFilters);
+
+    function applyFilters() {
+      if (!state.apps.length) {
+        alert('请先导入至少一个竞品的 .xlsx 关键词数据。');
+        return;
+      }
+      const minSearchIndex = Number(filterSearchIndex.value || 0);
+      const maxRank = Number(filterRank.value || Infinity);
+      const minPopularity = Number(filterPopularity.value || 0);
+      const containsTextRaw = (filterContains.value || '').toLowerCase();
+      const containsList = containsTextRaw
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      const brandMode = filterBrand.value;
+      const sortMode = filterSort.value;
+
+      const filteredApps = state.apps.map(app => {
+        const rows = app.rows.filter(row => {
+          if (row.searchIndex < minSearchIndex) return false;
+          if (row.rank > maxRank) return false;
+          if (row.popularity < minPopularity) return false;
+
+          if (containsList.length) {
+            const kwLower = row.keyword.toLowerCase();
+            const ok = containsList.some(str => kwLower.includes(str));
+            if (!ok) return false;
+          }
+
+          if (brandMode === 'nonbrand' && row.isBrand) return false;
+          if (brandMode === 'brand' && !row.isBrand) return false;
+
+          return true;
+        });
+        return { ...app, rows: rows.slice() };
       });
 
-      var rowsToShow = [];
-      if (state.currentTab === 'all') state.filtered.forEach(function(app) { app.rows.forEach(function(r) { rowsToShow.push({ r: r, app: app.name }); }); });
-      else { var app = state.filtered.filter(function(a) { return a.name === state.currentTab; })[0]; if (app) app.rows.forEach(function(r) { rowsToShow.push({ r: r, app: app.name }); }); }
+      // 排序
+      filteredApps.forEach(app => {
+        app.rows.sort((a, b) => {
+          if (sortMode === 'searchIndex-desc') {
+            return (b.searchIndex || 0) - (a.searchIndex || 0);
+          }
+          if (sortMode === 'rank-asc') {
+            return (a.rank || 999999) - (b.rank || 999999);
+          }
+          if (sortMode === 'popularity-desc') {
+            return (b.popularity || 0) - (a.popularity || 0);
+          }
+          return 0;
+        });
+      });
 
+      state.filtered = filteredApps;
+      state.currentTab = 'all';
+      buildCombinedKeywords();
+      renderResults();
+    }
+
+    // 聚合关键词，用于下方列表与文案生成
+    function buildCombinedKeywords() {
+      const map = new Map(); // keywordLower -> { keyword, metrics }
+      state.filtered.forEach(app => {
+        app.rows.forEach(row => {
+          const lower = row.keyword.toLowerCase();
+          if (!map.has(lower)) {
+            map.set(lower, {
+              keyword: row.keyword,
+              searchIndex: row.searchIndex || 0,
+              popularity: row.popularity || 0,
+              rank: row.rank || 999999,
+              apps: new Set([app.name]),
+              isBrand: !!row.isBrand,
+            });
+          } else {
+            const existing = map.get(lower);
+            existing.searchIndex = Math.max(existing.searchIndex, row.searchIndex || 0);
+            existing.popularity = Math.max(existing.popularity, row.popularity || 0);
+            existing.rank = Math.min(existing.rank, row.rank || 999999);
+            existing.apps.add(app.name);
+            existing.isBrand = existing.isBrand || !!row.isBrand;
+          }
+        });
+      });
+      state.combinedKeywords = Array.from(map.values()).map(item => ({
+        ...item,
+        apps: Array.from(item.apps),
+      }));
+    }
+
+    // -------- 结果展示 --------
+    const tabsEl = document.getElementById('tabs');
+    const resultsWrapper = document.getElementById('results-table-wrapper');
+    const noResults = document.getElementById('no-results');
+    const summaryCount = document.getElementById('summary-count');
+    const keywordListEl = document.getElementById('keyword-list');
+
+    function renderResults() {
+      const total = state.filtered.reduce((sum, app) => sum + app.rows.length, 0);
+      if (!total) {
+        summaryCount.textContent = '当前筛选下暂无符合条件的关键词';
+        resultsWrapper.style.display = 'none';
+        resultsWrapper.innerHTML = '';
+        noResults.style.display = 'block';
+        keywordListEl.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">还没有结果，请微调筛选条件后重新生成。</span>';
+        return;
+      }
+
+      summaryCount.textContent = `共 ${total} 条关键词 · ${state.filtered.length} 个竞品`;
+      noResults.style.display = 'none';
+
+      // Tabs
+      tabsEl.innerHTML = '';
+      const allTab = document.createElement('button');
+      allTab.className = 'tab' + (state.currentTab === 'all' ? ' active' : '');
+      allTab.textContent = '全部竞品';
+      const countSpan = document.createElement('span');
+      countSpan.className = 'tab-counter';
+      countSpan.textContent = total;
+      allTab.appendChild(countSpan);
+      allTab.addEventListener('click', () => {
+        state.currentTab = 'all';
+        renderResults();
+      });
+      tabsEl.appendChild(allTab);
+
+      state.filtered.forEach(app => {
+        const tab = document.createElement('button');
+        tab.className = 'tab' + (state.currentTab === app.name ? ' active' : '');
+        tab.textContent = app.name;
+        const cSpan = document.createElement('span');
+        cSpan.className = 'tab-counter';
+        cSpan.textContent = app.rows.length;
+        tab.appendChild(cSpan);
+        tab.addEventListener('click', () => {
+          state.currentTab = app.name;
+          renderResults();
+        });
+        tabsEl.appendChild(tab);
+      });
+
+      // 表格
+      resultsWrapper.style.display = 'block';
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = `
+        <tr>
+          <th class="sortable" data-key="keyword">关键词</th>
+          <th class="sortable" data-key="searchIndex">搜索指数</th>
+          <th class="sortable" data-key="rank">排名</th>
+          <th class="sortable" data-key="popularity">流行度</th>
+          <th>是否品牌词</th>
+          <th>竞品</th>
+        </tr>
+      `;
+      const tbody = document.createElement('tbody');
+
+      let rowsToShow = [];
+      if (state.currentTab === 'all') {
+        state.filtered.forEach(app => {
+          app.rows.forEach(row => {
+            rowsToShow.push({ ...row, app: app.name });
+          });
+        });
+      } else {
+        const app = state.filtered.find(a => a.name === state.currentTab);
+        if (app) {
+          rowsToShow = app.rows.map(row => ({ ...row, app: app.name }));
+        }
+      }
+
+      // 二次排序（点击表头）
       if (state.tableSort.key) {
-        var key = state.tableSort.key, dir = state.tableSort.direction;
-        rowsToShow.sort(function(a, b) {
-          var ra = a.r, rb = b.r;
-          if (key === 'keyword') { var ka = (ra.keyword || '').toLowerCase(), kb = (rb.keyword || '').toLowerCase(); return dir === 'asc' ? (ka < kb ? -1 : 1) : (ka > kb ? -1 : 1); }
-          var va = Number(ra[key]) || 0, vb = Number(rb[key]) || 0;
-          return dir === 'asc' ? va - vb : vb - va;
+        const { key, direction } = state.tableSort;
+        rowsToShow.sort((a, b) => {
+          if (key === 'keyword') {
+            const ka = (a.keyword || '').toLowerCase();
+            const kb = (b.keyword || '').toLowerCase();
+            if (ka === kb) return 0;
+            if (direction === 'asc') return ka < kb ? -1 : 1;
+            return ka > kb ? -1 : 1;
+          }
+          const va = Number(a[key] || 0);
+          const vb = Number(b[key] || 0);
+          if (direction === 'asc') return va - vb;
+          return vb - va;
         });
       }
 
-      var table = '<table><thead><tr><th class="sortable" data-key="keyword">关键词</th><th class="sortable" data-key="searchIndex">搜索指数</th><th class="sortable" data-key="rank">排名</th><th class="sortable" data-key="popularity">流行度</th><th>竞品</th></tr></thead><tbody>';
-      rowsToShow.forEach(function(x) {
-        table += '<tr><td class="keyword-cell">' + x.r.keyword + '</td><td>' + (x.r.searchIndex || 0) + '</td><td>' + (x.r.rank || '-') + '</td><td>' + (x.r.popularity || 0) + '</td><td>' + x.app + '</td></tr>';
+      rowsToShow.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="keyword-cell">${row.keyword}</td>
+          <td>${row.searchIndex || 0}</td>
+          <td>${row.rank || '-'}</td>
+          <td>${row.popularity || 0}</td>
+          <td>${row.isBrand ? '品牌词' : '非品牌词'}</td>
+          <td>${row.app}</td>
+        `;
+        tbody.appendChild(tr);
       });
-      table += '</tbody></table>';
-      wrapper.innerHTML = table;
-      wrapper.style.display = 'block';
 
-      wrapper.querySelectorAll('th.sortable').forEach(function(th) {
-        var key = th.getAttribute('data-key');
-        th.onclick = function() {
-          state.tableSort.key = key;
-          state.tableSort.direction = (state.tableSort.key === key && state.tableSort.direction === 'asc') ? 'desc' : 'asc';
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      resultsWrapper.innerHTML = '';
+      resultsWrapper.appendChild(table);
+
+      // 表头点击排序
+      thead.querySelectorAll('th.sortable').forEach(th => {
+        const key = th.dataset.key;
+        if (!key) return;
+        const span = document.createElement('span');
+        span.className = 'sort-indicator';
+        const active = state.tableSort.key === key;
+        const dir = state.tableSort.direction;
+        span.textContent = active ? (dir === 'asc' ? '↑' : '↓') : '';
+        th.appendChild(span);
+
+        th.addEventListener('click', () => {
+          if (state.tableSort.key === key) {
+            state.tableSort.direction = state.tableSort.direction === 'asc' ? 'desc' : 'asc';
+          } else {
+            state.tableSort.key = key;
+            state.tableSort.direction = key === 'keyword' ? 'asc' : 'desc';
+          }
           renderResults();
-        };
-      });
-
-      kwList.innerHTML = '';
-      state.combinedKeywords.sort(function(a, b) { return (b.searchIndex || 0) - (a.searchIndex || 0); }).forEach(function(item) {
-        var chip = document.createElement('span');
-        chip.className = 'keyword-chip';
-        chip.textContent = item.keyword;
-        chip.title = '搜索指数 ' + item.searchIndex + '，流行度 ' + item.popularity + '，排名 ' + item.rank + '，竞品 ' + item.apps.join(', ');
-        chip.onclick = function() { navigator.clipboard.writeText(item.keyword); chip.style.borderColor = 'var(--success)'; setTimeout(function() { chip.style.borderColor = ''; }, 600); };
-        kwList.appendChild(chip);
-      });
-    }
-
-    document.getElementById('input-title').oninput = function() {
-      var n = this.value.length;
-      document.getElementById('counter-title-text').textContent = n + ' / 30';
-      document.getElementById('counter-title-bar').style.width = Math.min(100, n / 30 * 100) + '%';
-    };
-    document.getElementById('input-subtitle').oninput = function() {
-      var n = this.value.length;
-      document.getElementById('counter-subtitle-text').textContent = n + ' / 30';
-      document.getElementById('counter-subtitle-bar').style.width = Math.min(100, n / 30 * 100) + '%';
-    };
-
-    document.getElementById('btn-generate-copy').onclick = function() {
-      var title = document.getElementById('input-title').value.trim();
-      var subtitle = document.getElementById('input-subtitle').value.trim();
-      document.getElementById('output-title').textContent = title;
-      document.getElementById('output-subtitle').textContent = subtitle;
-
-      var banned = {};
-      (document.getElementById('input-banned').value || '').split(',').concat(['app','iphone','ipad','ios','android','game','social','official','best']).forEach(function(w) { banned[w.trim().toLowerCase()] = true; });
-      function splitWords(t) { return (t || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean); }
-      var inTitleSub = {};
-      splitWords(title).concat(splitWords(subtitle)).forEach(function(w) { inTitleSub[w] = true; });
-
-      var candidates = {};
-      state.combinedKeywords.forEach(function(item) {
-        splitWords(item.keyword).forEach(function(w) {
-          if (!banned[w] && !inTitleSub[w] && w.length > 1) candidates[w] = (candidates[w] || 0) + (item.searchIndex || 0) / 1000 + (item.popularity || 0);
         });
       });
-      (document.getElementById('input-extra-keywords').value || '').split(',').forEach(function(w) {
-        splitWords(w).forEach(function(p) { if (!banned[p] && !inTitleSub[p] && p.length > 1) candidates[p] = (candidates[p] || 0) + 10; });
-      });
 
-      var words = Object.keys(candidates).sort(function(a, b) { return (candidates[b] || 0) - (candidates[a] || 0); });
-      var tags = [];
-      var len = 0;
-      words.forEach(function(w) {
-        var add = (tags.length ? ',' : '') + w;
-        if (len + add.length <= 100) { tags.push(w); len += add.length; }
-      });
-      state.tagKeywords = tags.length ? tags : (words[0] ? [words[0]] : []);
-      renderTags();
-    };
-
-    function renderTags() {
-      var list = document.getElementById('tag-list');
-      list.innerHTML = '';
-      state.tagKeywords.forEach(function(word, i) {
-        var el = document.createElement('span');
-        el.className = 'tag';
-        el.innerHTML = word + ' <span class="tag-remove" data-i="' + i + '">×</span>';
-        list.appendChild(el);
-      });
-      list.onclick = function(e) {
-        if (e.target.classList.contains('tag-remove')) {
-          state.tagKeywords.splice(Number(e.target.getAttribute('data-i')), 1);
-          renderTags();
-        }
-      };
-      var str = state.tagKeywords.join(',');
-      document.getElementById('keywords-len').textContent = str.length;
-      document.getElementById('keywords-progress-bar').style.width = Math.min(100, str.length) + '%';
+      // 下方关键词 chip 列表
+      renderKeywordChips();
     }
 
-    document.getElementById('btn-add-tag').onclick = function() {
-      var v = (document.getElementById('tag-input').value || '').trim().toLowerCase().replace(/\s+/g, '');
-      if (v) { state.tagKeywords.push(v); document.getElementById('tag-input').value = ''; renderTags(); }
-    };
-    document.getElementById('tag-input').onkeydown = function(e) { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-tag').click(); } };
-    document.getElementById('btn-sort-tags').onclick = function() { state.tagKeywords.sort(function(a, b) { return a.length - b.length; }); renderTags(); };
-    document.getElementById('btn-dedupe-tags').onclick = function() { state.tagKeywords = state.tagKeywords.filter(function(w, i, arr) { return arr.indexOf(w) === i; }); renderTags(); };
-    document.getElementById('btn-clear-tags').onclick = function() { if (confirm('确定清空？')) { state.tagKeywords = []; renderTags(); } };
-    document.getElementById('btn-copy-keywords').onclick = function() {
-      navigator.clipboard.writeText(state.tagKeywords.join(',')).then(function() {
-        var btn = document.getElementById('btn-copy-keywords');
-        btn.textContent = '已复制';
-        setTimeout(function() { btn.textContent = '复制 Keywords'; }, 700);
-      });
-    };
+    function renderKeywordChips() {
+      keywordListEl.innerHTML = '';
+      if (!state.combinedKeywords.length) {
+        keywordListEl.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">还没有聚合结果，请先完成筛选流程。</span>';
+        return;
+      }
+      state.combinedKeywords
+        .slice()
+        .sort((a, b) => (b.searchIndex || 0) - (a.searchIndex || 0))
+        .forEach(item => {
+          const chip = document.createElement('div');
+          chip.className = 'keyword-chip';
+          chip.textContent = item.keyword;
+          chip.title = '点击复制';
+          chip.addEventListener('click', () => {
+            navigator.clipboard.writeText(item.keyword).then(() => {
+              chip.dataset.copied = 'true';
+              const prev = chip.textContent;
+              chip.textContent = '✓ 已复制';
+              setTimeout(() => {
+                chip.dataset.copied = 'false';
+                chip.textContent = prev;
+              }, 900);
+            });
+          });
 
-    document.querySelectorAll('button[data-copy-target]').forEach(function(btn) {
-      btn.onclick = function() {
-        var el = document.getElementById(btn.getAttribute('data-copy-target'));
-        if (el) navigator.clipboard.writeText(el.textContent || '').then(function() { btn.textContent = '已复制'; setTimeout(function() { btn.textContent = '复制'; }, 700); });
-      };
+          chip.addEventListener('mouseenter', () => {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'keyword-tooltip';
+            tooltip.innerHTML = `
+              搜索指数：${item.searchIndex || 0}<br />
+              流行度：${item.popularity || 0}<br />
+              最佳排名：${item.rank || '-'}<br />
+              竞品：${item.apps.join(', ')}<br />
+              品牌词：${item.isBrand ? '是' : '否'}
+            `;
+            chip.appendChild(tooltip);
+          });
+          chip.addEventListener('mouseleave', () => {
+            const tooltip = chip.querySelector('.keyword-tooltip');
+            if (tooltip) tooltip.remove();
+          });
+
+          keywordListEl.appendChild(chip);
+        });
+    }
+
+    // -------- 文案生成 · 字数计数 --------
+    const titleInput = document.getElementById('input-title');
+    const subtitleInput = document.getElementById('input-subtitle');
+    const titleCounterText = document.getElementById('counter-title-text');
+    const subtitleCounterText = document.getElementById('counter-subtitle-text');
+    const titleBar = document.getElementById('counter-title-bar');
+    const subtitleBar = document.getElementById('counter-subtitle-bar');
+
+    function updateCharCounter(input, limit, textEl, barEl) {
+      const len = input.value.length;
+      textEl.textContent = `${len} / ${limit}`;
+      const pct = Math.min(100, (len / limit) * 100);
+      barEl.style.width = `${pct}%`;
+      if (len > limit) {
+        barEl.style.background = 'var(--danger)';
+        textEl.style.color = 'var(--danger)';
+      } else if (len >= limit * 0.9) {
+        barEl.style.background = 'var(--warning)';
+        textEl.style.color = 'var(--warning)';
+      } else {
+        barEl.style.background = '';
+        textEl.style.color = '';
+      }
+    }
+
+    titleInput.addEventListener('input', () => updateCharCounter(titleInput, 30, titleCounterText, titleBar));
+    subtitleInput.addEventListener('input', () => updateCharCounter(subtitleInput, 30, subtitleCounterText, subtitleBar));
+    updateCharCounter(titleInput, 30, titleCounterText, titleBar);
+    updateCharCounter(subtitleInput, 30, subtitleCounterText, subtitleBar);
+
+    // -------- 文案生成核心逻辑（主要针对 Keywords） --------
+    const notesInput = document.getElementById('input-notes');
+    const extraKeywordsInput = document.getElementById('input-extra-keywords');
+    const bannedInput = document.getElementById('input-banned');
+    const btnGenerateCopy = document.getElementById('btn-generate-copy');
+    const outputTitle = document.getElementById('output-title');
+    const outputSubtitle = document.getElementById('output-subtitle');
+
+    btnGenerateCopy.addEventListener('click', () => {
+      if (!state.combinedKeywords.length) {
+        if (!confirm('当前还没有筛选结果，仅根据输入内容生成 Keywords。是否继续？')) {
+          return;
+        }
+      }
+
+      const title = titleInput.value.trim();
+      const subtitle = subtitleInput.value.trim();
+
+      // Title/Subtitle：工具不强制改写，保持自然可读，直接输出
+      outputTitle.textContent = title;
+      outputSubtitle.textContent = subtitle;
+
+      // 1. 禁用词集合：用户输入 + 固定规则
+      const bannedSet = new Set();
+      (bannedInput.value || '')
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean)
+        .forEach(w => bannedSet.add(w));
+
+      // 固定黑名单
+      const defaultBanned = [
+        'app', 'apps', 'iphone', 'ipad', 'ipod', 'ios', 'android',
+        'free download', 'download', 'official', 'best', 'no.1',
+        'game', 'games', 'social', 'productivity', 'music', 'entertainment'
+      ];
+      defaultBanned.forEach(w => bannedSet.add(w));
+
+      // 2. 已在 Title / Subtitle 出现的词，后续 Keywords 避免重复
+      function splitWords(text) {
+        return text
+          .toLowerCase()
+          .split(/[^a-z0-9]+/i)
+          .map(w => w.trim())
+          .filter(Boolean);
+      }
+      const duplicatedSet = new Set();
+      splitWords(title).forEach(w => duplicatedSet.add(w));
+      splitWords(subtitle).forEach(w => duplicatedSet.add(w));
+
+      // 3. 候选词来源：筛选结果 + 额外补充 + 说明拆词
+      const candidateWords = new Set();
+
+      // 从筛选结果拆成词根
+      state.combinedKeywords.forEach(item => {
+        const parts = splitWords(item.keyword);
+        parts.forEach(p => candidateWords.add(p));
+      });
+
+      // 额外补充
+      (extraKeywordsInput.value || '')
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean)
+        .forEach(w => {
+          const words = splitWords(w);
+          words.forEach(p => candidateWords.add(p));
+        });
+
+      // 说明
+      splitWords(notesInput.value || '').forEach(p => candidateWords.add(p));
+
+      // 4. 过滤：禁用词、品牌词、重复词、简单复数转单数
+      function normalizeSingle(word) {
+        if (word.endsWith('ies') && word.length > 3) return word.slice(0, -3) + 'y';
+        if (word.endsWith('s') && !word.endsWith('ss') && word.length > 3) return word.slice(0, -1);
+        return word;
+      }
+
+      const finalCandidates = [];
+      candidateWords.forEach(w => {
+        const single = normalizeSingle(w);
+        if (!single) return;
+        if (bannedSet.has(single)) return;
+        if (duplicatedSet.has(single)) return;
+        if (single.length <= 1) return;
+        finalCandidates.push(single);
+      });
+
+      // 去重
+      const unique = Array.from(new Set(finalCandidates));
+
+      // 5. 为每个候选词打分（核心：在筛选结果中越强、越多竞品用的词根，得分越高）
+      const scoreMap = new Map();
+      unique.forEach(w => {
+        scoreMap.set(w, 0);
+      });
+
+      state.combinedKeywords.forEach(item => {
+        const parts = splitWords(item.keyword);
+        parts.forEach(p => {
+          const single = normalizeSingle(p);
+          if (!scoreMap.has(single)) return;
+          const score =
+            (item.searchIndex || 0) / 1000 +
+            (Math.max(0, 20 - (item.rank || 999999))) * 2 +
+            (item.popularity || 0) * 5 +
+            (item.apps.length || 1) * 10;
+          scoreMap.set(single, scoreMap.get(single) + score);
+        });
+      });
+
+      const ranked = unique.sort((a, b) => (scoreMap.get(b) || 0) - (scoreMap.get(a) || 0));
+
+      // 6. 生成 Keywords 字符串：优先补高分词，逗号分隔，无空格，≤ 100 字符
+      const tags = [];
+      let currentLength = 0;
+      ranked.forEach(word => {
+        if (!word) return;
+        const candidate = tags.length ? `,${word}` : word;
+        const newLength = currentLength + candidate.length;
+        if (newLength <= 100) {
+          tags.push(word);
+          currentLength = newLength;
+        }
+      });
+
+      if (!tags.length && unique.length) {
+        // 兜底至少放一个词
+        tags.push(unique[0]);
+      }
+
+      state.tagKeywords = tags;
+      renderTags();
     });
 
+    // -------- AI 优化 Title / Subtitle --------
+    const btnAiOptimize = document.getElementById('btn-ai-optimize');
+    const btnAiLabel = document.getElementById('btn-ai-label');
+    const aiExplainContent = document.getElementById('ai-explain-content');
+
+    btnAiOptimize.addEventListener('click', async () => {
+      const title = titleInput.value.trim();
+      if (!title) {
+        alert('请先填写产品 Title');
+        return;
+      }
+      const subtitle = subtitleInput.value.trim();
+      const notes = notesInput.value.trim();
+      const extra = extraKeywordsInput.value.trim();
+
+      // 构建关键词数据池（取前60条）
+      const kwPool = state.combinedKeywords.length
+        ? state.combinedKeywords.slice(0, 60)
+            .map(k => `${k.keyword}(指数${k.searchIndex},流行度${k.popularity},排名${k.rank})`)
+            .join('; ')
+        : '';
+
+      // 当前 Keywords 内容
+      const currentKw = state.tagKeywords.join(',');
+
+      btnAiOptimize.disabled = true;
+      btnAiLabel.textContent = '生成中…';
+      aiExplainContent.textContent = '正在请求 AI，请稍候…';
+
+      const systemPrompt = `你是一名顶级 App Store ASO 优化专家。
+
+=== 你的任务 ===
+根据用户提供的产品信息，优化 Title 和 Subtitle，并给出简要说明。Keywords 字段由本地算法处理，你无需生成。
+
+=== 硬性规则 ===
+1. Title ≤ 30 字符，必须自然可读，像真实产品名，不能堆词
+2. Subtitle ≤ 30 字符，自然流畅，像真实副标题，补充核心场景/卖点
+3. Title 和 Subtitle 中不重复相同词
+4. 不使用竞品品牌名
+5. 不在 Title/Subtitle 中写 App、iPhone、iPad
+
+=== Title / Subtitle 通顺度要求 ===
+- ✅ 正确示例：Screw Sort: Pin Jam Puzzle 3D / Relax & Solve Bolt Puzzles
+- ❌ 错误示例：Screw Bolt Pin Sort Jam 3D（纯堆词）
+- Title 权重最高，用户一眼能看懂产品是什么
+- Subtitle 可以是短句、场景描述或核心卖点
+
+请严格按以下 JSON 格式返回，不输出任何其他内容：
+{"title":"优化后 Title（≤30字符）","subtitle":"优化后 Subtitle（≤30字符）","explain":"Title和Subtitle选词逻辑说明，100字以内"}`;
+
+      const userMsg = `产品 Title：${title}
+${subtitle ? `当前 Subtitle：${subtitle}` : '（未填写 Subtitle，请帮我创作）'}
+${notes ? `补充说明：${notes}` : ''}
+${extra ? `额外关键词参考：${extra}` : ''}
+${currentKw ? `当前 Keywords（已由本地生成）：${currentKw}` : ''}
+${kwPool ? `
+竞品关键词数据池：
+${kwPool}` : '
+（暂无竞品关键词数据）'}
+
+请优化 Title 和 Subtitle，并说明选词理由。`;
+
+      try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 600,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userMsg }]
+          })
+        });
+
+        const data = await resp.json();
+        const raw = (data.content || []).map(b => b.text || '').join('');
+        const cleaned = raw.replace(/```json|```/g, '').trim();
+
+        let parsed;
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch (e) {
+          const m = cleaned.match(/\{[\s\S]+\}/);
+          if (m) parsed = JSON.parse(m[0]);
+          else throw new Error('JSON 解析失败，原始返回：' + cleaned.slice(0, 200));
+        }
+
+        // 写入输出
+        if (parsed.title) {
+          outputTitle.textContent = parsed.title;
+          titleInput.value = parsed.title;
+          updateCharCounter(titleInput, 30, titleCounterText, titleBar);
+        }
+        if (parsed.subtitle) {
+          outputSubtitle.textContent = parsed.subtitle;
+          subtitleInput.value = parsed.subtitle;
+          updateCharCounter(subtitleInput, 30, subtitleCounterText, subtitleBar);
+        }
+        aiExplainContent.style.color = '';
+        aiExplainContent.textContent = parsed.explain || '（AI 未返回说明）';
+
+      } catch (err) {
+        aiExplainContent.style.color = 'var(--danger)';
+        aiExplainContent.textContent = '⚠ AI 请求失败：' + err.message;
+      } finally {
+        btnAiOptimize.disabled = false;
+        btnAiLabel.textContent = '✦ AI 优化 Title / Subtitle';
+      }
+    });
+
+    // -------- Tag 编辑器 --------
+    const tagList = document.getElementById('tag-list');
+    const tagInput = document.getElementById('tag-input');
+    const btnAddTag = document.getElementById('btn-add-tag');
+    const btnSortTags = document.getElementById('btn-sort-tags');
+    const btnDedupeTags = document.getElementById('btn-dedupe-tags');
+    const btnClearTags = document.getElementById('btn-clear-tags');
+    const btnCopyKeywords = document.getElementById('btn-copy-keywords');
+    const keywordsCounterText = document.getElementById('keywords-counter-text').querySelector('.value');
+    const keywordsProgressBar = document.getElementById('keywords-progress-bar');
+
+    function renderTags() {
+      tagList.innerHTML = '';
+      if (!state.tagKeywords.length) {
+        tagList.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">暂无 Keywords，请在左侧生成或手动添加词根。</span>';
+      } else {
+        state.tagKeywords.forEach((word, idx) => {
+          const el = document.createElement('div');
+          el.className = 'tag';
+          el.innerHTML = `<span>${word}</span><span data-index="${idx}" class="tag-remove">×</span>`;
+          tagList.appendChild(el);
+        });
+      }
+      updateKeywordsCounter();
+    }
+
+    function updateKeywordsCounter() {
+      const str = state.tagKeywords.join(',');
+      const len = str.length;
+      keywordsCounterText.textContent = len;
+      const pct = Math.min(100, (len / 100) * 100);
+      keywordsProgressBar.style.width = `${pct}%`;
+    }
+
+    tagList.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target.classList.contains('tag-remove')) {
+        const idx = Number(target.getAttribute('data-index'));
+        state.tagKeywords.splice(idx, 1);
+        renderTags();
+      }
+    });
+
+    function addTagFromInput() {
+      const val = (tagInput.value || '').trim().toLowerCase();
+      if (!val) return;
+      const normalized = val.replace(/\s+/g, '');
+      if (!normalized) return;
+      state.tagKeywords.push(normalized);
+      tagInput.value = '';
+      renderTags();
+    }
+
+    btnAddTag.addEventListener('click', addTagFromInput);
+    tagInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addTagFromInput();
+      }
+    });
+
+    btnSortTags.addEventListener('click', () => {
+      state.tagKeywords.sort((a, b) => a.length - b.length);
+      renderTags();
+    });
+
+    btnDedupeTags.addEventListener('click', () => {
+      state.tagKeywords = Array.from(new Set(state.tagKeywords));
+      renderTags();
+    });
+
+    btnClearTags.addEventListener('click', () => {
+      if (!state.tagKeywords.length) return;
+      if (confirm('确定清空所有 Keywords 吗？')) {
+        state.tagKeywords = [];
+        renderTags();
+      }
+    });
+
+    btnCopyKeywords.addEventListener('click', () => {
+      const text = state.tagKeywords.join(',');
+      navigator.clipboard.writeText(text).then(() => {
+        btnCopyKeywords.textContent = '已复制';
+        setTimeout(() => {
+          btnCopyKeywords.textContent = '复制 Keywords';
+        }, 700);
+      });
+    });
+
+    // 输出端复制按钮（Title / Subtitle）
+    document.querySelectorAll('button[data-copy-target]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-copy-target');
+        const el = document.getElementById(targetId);
+        if (!el) return;
+        const text = el.textContent || '';
+        navigator.clipboard.writeText(text).then(() => {
+          const old = btn.textContent;
+          btn.textContent = '已复制';
+          setTimeout(() => (btn.textContent = old), 700);
+        });
+      });
+    });
+
+    // 初始化
     renderTags();
   </script>
 </body>
