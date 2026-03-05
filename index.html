@@ -1381,6 +1381,7 @@
   </div>
 
   <script>
+  document.addEventListener('DOMContentLoaded', () => {
     // -------- 基础状态 --------
     const state = {
       apps: [], // { name, rows: [{ keyword, searchIndex, rank, popularity, isBrand }] }
@@ -2255,6 +2256,7 @@ ${kwPool}` : '
 
     // 初始化
     renderTags();
+  }); // end DOMContentLoaded
   </script>
 </body>
 </html>
