@@ -1515,19 +1515,49 @@
             const wb = XLSX.read(data, { type: 'array' });
             const sheetName = wb.SheetNames[0];
             const sheet = wb.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-            const rows = json.map(row => {
-              const keyword = String(row[colMap.keyword] || '').trim();
-              const searchIndex = Number(row[colMap.searchIndex] || 0);
-              const rank = Number(row[colMap.rank] || 999999);
-              const popularity = Number(row[colMap.popularity] || 0);
+            // 点点数据：第1行是标题，第2行是表头，第3行起是数据
+            // 用 header:1 读取原始二维数组，自动检测表头行
+            const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+            // 找到包含「关键词」的那一行作为表头（兼容不同格式）
+            let headerRowIdx = 0;
+            for (let i = 0; i < Math.min(5, raw.length); i++) {
+              const rowStr = raw[i].join(',');
+              if (rowStr.includes('关键词') || rowStr.includes('keyword') || rowStr.includes('Keyword')) {
+                headerRowIdx = i;
+                break;
+              }
+            }
+            const headers = raw[headerRowIdx].map(h => String(h).trim());
+            const dataRows = raw.slice(headerRowIdx + 1);
+
+            // 动态列名匹配（模糊匹配，兼容表头细微差异）
+            function findCol(candidates) {
+              for (const c of candidates) {
+                const idx = headers.findIndex(h => h.includes(c));
+                if (idx >= 0) return headers[idx];
+              }
+              return null;
+            }
+            const kwCol       = findCol([colMap.keyword, '关键词', 'keyword', 'Keyword']) || headers[0];
+            const idxCol      = findCol([colMap.searchIndex, '搜索指数', '搜索量', 'search']) || headers[1];
+            const rankCol     = findCol([colMap.rank, '排名', 'rank', 'Rank']) || headers[2];
+            const popCol      = findCol([colMap.popularity, '流行度', '热度', 'popular']) || headers[3];
+            const brandCol    = findCol([colMap.brand, '品牌词', 'brand']) || null;
+
+            const rows = dataRows.map(rawRow => {
+              const row = {};
+              headers.forEach((h, i) => { row[h] = rawRow[i] ?? ''; });
+              const keyword = String(row[kwCol] || '').trim();
+              const searchIndex = Number(row[idxCol]) || 0;
+              const rank = Number(row[rankCol]) || 999999;
+              const popularity = Number(row[popCol]) || 0;
               let isBrand = false;
-              if (colMap.brand) {
-                const val = String(row[colMap.brand] || '').trim();
-                if (colMap.brandYes && val === colMap.brandYes) {
-                  isBrand = true;
-                }
+              if (brandCol && row[brandCol] !== undefined) {
+                const val = String(row[brandCol]).trim();
+                isBrand = val === '品牌词' || val === '是' || val === 'true' || val === '1'
+                  || (colMap.brandYes && val === colMap.brandYes);
               }
               return { keyword, searchIndex, rank, popularity, isBrand };
             }).filter(r => r.keyword);
