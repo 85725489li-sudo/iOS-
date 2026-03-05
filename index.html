@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ASO 关键词分析与文案生成工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #050816;
+      --bg-alt: #0b1120;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border: #1f2937;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --danger: #f97373;
+      --success: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1d293b 0, #020617 40%, #020617 100%);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.97));
+      border-right: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 20px 18px;
+      position: fixed;
+      inset: 0 auto 0 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      backdrop-filter: blur(18px);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .logo-badge {
+      width: 32px; height: 32px; border-radius: 12px;
+      background: radial-gradient(circle at 30% 0, #bae6fd 0, #0ea5e9 23%, #1d4ed8 70%);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #0f172a; font-size: 16px;
+    }
+    .logo-text-main { font-weight: 600; font-size: 16px; }
+    .logo-text-sub { font-size: 12px; color: var(--text-muted); }
+    .sidebar-section-title {
+      margin: 14px 0 6px; font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.16em; color: var(--text-muted);
+    }
+    .nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .nav-link {
+      display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px;
+      font-size: 13px; color: var(--text-muted); cursor: pointer;
+      border: 1px solid transparent; background: none; color: inherit; width: 100%; text-align: left;
+      transition: all 0.16s ease-out;
+    }
+    .nav-link:hover { background: rgba(30, 64, 175, 0.55); color: var(--text); }
+    .nav-link.active { background: rgba(56, 189, 248, 0.15); color: #e5f2ff; border-color: rgba(129, 140, 248, 0.8); }
+    .btn-sop {
+      margin-top: 8px; padding: 7px 10px; border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5); background: rgba(15, 23, 42, 0.98);
+      font-size: 12px; color: var(--text); cursor: pointer;
+    }
+    .btn-sop:hover { border-color: rgba(56, 189, 248, 0.9); }
+    .main {
+      margin-left: 260px; padding: 20px 26px 28px; flex: 1; overflow-y: auto;
+    }
+    .section {
+      margin-bottom: 26px; padding: 18px; border-radius: var(--radius-lg);
+      background: radial-gradient(circle at top left, rgba(30, 64, 175, 0.55) 0, rgba(15, 23, 42, 0.98) 36%);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .section-title { font-size: 17px; font-weight: 600; }
+    .section-step { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-muted); }
+    .section-desc, .small-help { font-size: 12px; color: var(--text-muted); }
+    .dropzone {
+      border-radius: var(--radius-md); border: 1px dashed rgba(148, 163, 184, 0.7);
+      background: rgba(56, 189, 248, 0.08); padding: 12px 14px;
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      cursor: pointer; transition: all 0.18s ease-out;
+    }
+    .dropzone:hover { border-color: rgba(59, 130, 246, 0.9); }
+    .dropzone.dragover { border-color: rgba(34, 197, 94, 0.95); }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%; background: rgba(15, 23, 42, 0.98); border-radius: 8px;
+      border: 1px solid rgba(55, 65, 81, 0.85); padding: 7px 9px; color: var(--text);
+      font-size: 13px; outline: none; font-family: inherit;
+    }
+    textarea { min-height: 68px; resize: vertical; }
+    label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+    .btn {
+      border-radius: 999px; padding: 6px 11px; border: 1px solid rgba(148, 163, 184, 0.85);
+      background: rgba(15, 23, 42, 0.98); color: var(--text); font-size: 12px;
+      display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    }
+    .btn-primary { border-color: rgba(56, 189, 248, 0.9); background: linear-gradient(90deg, rgba(56, 189, 248, 0.3), rgba(59, 130, 246, 0.4)); color: #e0f2fe; }
+    .btn-ghost { background: rgba(15, 23, 42, 0.9); }
+    .btn-xs { padding: 3px 8px; font-size: 11px; }
+    .card {
+      background: rgba(15, 23, 42, 0.92); border-radius: var(--radius-md);
+      border: 1px solid rgba(51, 65, 85, 0.9); padding: 10px 12px;
+    }
+    .card-header { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .tab {
+      padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 12px; cursor: pointer; color: var(--text-muted); background: rgba(15, 23, 42, 0.9);
+    }
+    .tab.active { border-color: rgba(56, 189, 248, 0.9); color: #e0f2fe; background: rgba(56, 189, 248, 0.2); }
+    .table-wrapper { max-height: 280px; overflow: auto; border-radius: 10px; border: 1px solid rgba(51, 65, 85, 0.98); }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 6px 9px; border-bottom: 1px solid rgba(31, 41, 55, 0.95); }
+    th { text-align: left; font-weight: 500; font-size: 11px; color: var(--text-muted); cursor: pointer; }
+    tr:hover { background: rgba(30, 64, 175, 0.6); }
+    .keyword-chip {
+      padding: 3px 8px; border-radius: 999px; background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.7); font-size: 11px; cursor: pointer;
+      display: inline-block; margin: 4px 4px 4px 0;
+    }
+    .keyword-chip:hover { border-color: rgba(56, 189, 248, 0.9); }
+    .keyword-tooltip {
+      position: absolute; left: 50%; bottom: 130%; transform: translateX(-50%);
+      white-space: nowrap; background: rgba(15, 23, 42, 0.98); border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.85); padding: 5px 8px; font-size: 11px;
+      z-index: 10;
+    }
+    .tag-editor { background: rgba(15, 23, 42, 0.96); border-radius: var(--radius-md); border: 1px solid rgba(51, 65, 85, 0.98); padding: 10px; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px;
+      font-size: 11px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(148, 163, 184, 0.85);
+    }
+    .tag-remove { cursor: pointer; }
+    .progress-bar { width: 100%; height: 6px; border-radius: 999px; background: rgba(30, 64, 175, 0.8); overflow: hidden; }
+    .progress-bar-inner { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444); width: 0%; transition: width 0.15s; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; z-index: 50; }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: min(860px, 100% - 48px); max-height: 80vh; border-radius: 18px;
+      background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 16px 18px; overflow-y: auto;
+    }
+    .modal-section { margin-bottom: 10px; padding: 9px; border-radius: 12px; background: rgba(15, 23, 42, 0.95); }
+    .modal-section-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .modal-section ul { margin: 0; padding-left: 16px; color: var(--text-muted); }
+    @media (max-width: 900px) { .sidebar { display: none; } .main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-badge">ASO</div>
+      <div>
+        <div class="logo-text-main">Keyword Studio</div>
+        <div class="logo-text-sub">App Store US · 本地运行</div>
+      </div>
+    </div>
+    <div class="sidebar-section-title">工作流</div>
+    <ul class="nav-list">
+      <li><button class="nav-link active" data-target="section-import">① 导入竞品关键词</button></li>
+      <li><button class="nav-link" data-target="section-filters">② 筛选条件设置</button></li>
+      <li><button class="nav-link" data-target="section-results">③ 结果分析与汇总</button></li>
+      <li><button class="nav-link" data-target="section-copy">④ ASO 文案生成</button></li>
+    </ul>
+    <div class="sidebar-footer" style="margin-top:auto; padding-top:8px; border-top:1px solid rgba(0,0,0,0.2);">
+      <button id="btn-open-sop" class="btn-sop">📖 ASO 规则手册</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="section-import" class="section">
+      <div class="section-step">STEP 1 · 导入</div>
+      <div class="section-title">导入点点数据（.xlsx 竞品关键词）</div>
+      <p class="section-desc">支持多竞品、拖拽批量导入。每个文件代表一个竞品。</p>
+      <div class="dropzone" id="dropzone">
+        <div>拖拽多个 .xlsx 到此处，或点击下方按钮选择文件</div>
+        <button id="btn-file-select" class="btn btn-primary">选择 .xlsx 文件</button>
+        <input id="file-input" type="file" accept=".xlsx,.xls" multiple style="display:none" />
+      </div>
+      <div style="margin-top:10px;">
+        <div class="card">
+          <div class="card-header">列名映射（适配点点导出表头）</div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; font-size:12px;">
+            <div><label>关键词列名</label><input id="map-keyword" type="text" value="关键词" /></div>
+            <div><label>搜索指数列名</label><input id="map-search-index" type="text" value="搜索指数" /></div>
+            <div><label>排名列名</label><input id="map-rank" type="text" value="排名" /></div>
+            <div><label>流行度列名</label><input id="map-popularity" type="text" value="流行度" /></div>
+            <div><label>品牌词列名（可选）</label><input id="map-brand" type="text" value="品牌词" placeholder="如：品牌词" /></div>
+            <div><label>品牌标记值</label><input id="map-brand-yes" type="text" value="是" /></div>
+          </div>
+        </div>
+        <div id="imported-list" style="margin-top:8px; font-size:12px; color: var(--text-muted);">暂无数据，请先导入 .xlsx 文件。</div>
+      </div>
+    </section>
+
+    <section id="section-filters" class="section">
+      <div class="section-step">STEP 2 · 筛选</div>
+      <div class="section-title">关键词筛选条件（全部满足才纳入结果）</div>
+      <div class="filter-grid" style="margin-top:10px;">
+        <div><label>搜索指数 ≥</label><input id="filter-search-index" type="number" value="5000" min="0" /></div>
+        <div><label>排名 ≤</label><input id="filter-rank" type="number" value="10" min="1" /></div>
+        <div><label>流行度 ≥</label><input id="filter-popularity" type="number" value="5" min="0" /></div>
+        <div><label>关键词包含（可选，逗号分隔）</label><input id="filter-contains" type="text" placeholder="如：vpn, proxy" /></div>
+        <div><label>品牌词筛选</label>
+          <select id="filter-brand">
+            <option value="all">全部</option>
+            <option value="nonbrand">仅非品牌词</option>
+            <option value="brand">仅品牌词</option>
+          </select>
+        </div>
+        <div><label>排序方式</label>
+          <select id="filter-sort">
+            <option value="searchIndex-desc">搜索指数 高→低</option>
+            <option value="rank-asc">排名 好→差</option>
+            <option value="popularity-desc">流行度 高→低</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <button id="btn-apply-filters" class="btn btn-primary">应用筛选</button>
+        <button id="btn-reset-filters" class="btn btn-ghost btn-xs">重置为默认</button>
+      </div>
+    </section>
+
+    <section id="section-results" class="section">
+      <div class="section-step">STEP 3 · 结果</div>
+      <div class="section-title">分析结果（点击表头可排序，点击关键词可复制）</div>
+      <div class="card" style="margin-top:10px;">
+        <div id="tabs" class="tabs"></div>
+        <div id="results-table-wrapper" class="table-wrapper" style="display:none;"></div>
+        <div id="no-results" style="padding:8px; color: var(--text-muted);">请先导入数据并应用筛选。</div>
+        <div class="card-header" style="margin-top:10px;">高价值关键词列表（悬停看详情）</div>
+        <div id="keyword-list" class="keyword-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+      </div>
+    </section>
+
+    <section id="section-copy" class="section">
+      <div class="section-step">STEP 4 · 文案</div>
+      <div class="section-title">ASO 文案生成（Title / Subtitle / Keywords）</div>
+      <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:10px;">
+        <div class="card" style="flex:1; min-width:280px;">
+          <div class="card-header">输入端</div>
+          <div><label>Title（≤30 字符）</label><input id="input-title" type="text" placeholder="产品标题" /></div>
+          <div class="char-counter" style="font-size:11px; color: var(--text-muted);"><span id="counter-title-text">0 / 30</span><div class="progress-bar"><div id="counter-title-bar" class="progress-bar-inner"></div></div></div>
+          <div style="margin-top:8px;"><label>Subtitle（≤30 字符）</label><input id="input-subtitle" type="text" placeholder="副标题" /></div>
+          <div class="char-counter" style="font-size:11px;"><span id="counter-subtitle-text">0 / 30</span><div class="progress-bar"><div id="counter-subtitle-bar" class="progress-bar-inner"></div></div></div>
+          <div style="margin-top:8px;"><label>补充说明（可选）</label><textarea id="input-notes" placeholder="目标用户/场景/卖点"></textarea></div>
+          <div style="margin-top:8px;"><label>额外关键词（逗号分隔）</label><input id="input-extra-keywords" type="text" placeholder="如：unlimited, secure" /></div>
+          <div style="margin-top:8px;"><label>禁用词（品牌/竞品/类别名，逗号分隔）</label><input id="input-banned" type="text" placeholder="如：netflix, app, game" /></div>
+          <button id="btn-generate-copy" class="btn btn-primary" style="margin-top:10px;">根据筛选结果生成 ASO 文案</button>
+        </div>
+        <div class="card" style="flex:1; min-width:280px;">
+          <div class="card-header">输出端</div>
+          <div><label>Title</label><div id="output-title" class="card" style="min-height:36px;"></div><button data-copy-target="output-title" class="btn btn-ghost btn-xs">复制</button></div>
+          <div style="margin-top:8px;"><label>Subtitle</label><div id="output-subtitle" class="card" style="min-height:36px;"></div><button data-copy-target="output-subtitle" class="btn btn-ghost btn-xs">复制</button></div>
+          <div style="margin-top:8px;"><label>Keywords（≤100 字符）</label>
+            <div class="tag-editor">
+              <div id="tag-list" class="tag-list"></div>
+              <div style="display:flex; gap:6px; margin-top:8px;"><input id="tag-input" type="text" placeholder="输入词根回车添加" /><button id="btn-add-tag" class="btn btn-ghost btn-xs">添加</button></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:11px;">
+                <span>长度：<span id="keywords-len">0</span> / 100</span>
+                <span><button id="btn-sort-tags" class="btn btn-ghost btn-xs">按长度排序</button><button id="btn-dedupe-tags" class="btn btn-ghost btn-xs">去重</button><button id="btn-clear-tags" class="btn btn-ghost btn-xs">清空</button><button id="btn-copy-keywords" class="btn btn-primary btn-xs">复制 Keywords</button></span>
+              </div>
+              <div class="progress-bar" style="margin-top:6px;"><div id="keywords-progress-bar" class="progress-bar-inner"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal-sop" class="modal-backdrop">
+    <div class="modal">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <strong>📖 ASO 规则手册</strong>
+        <button id="btn-close-sop" class="btn btn-ghost btn-xs">关闭</button>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">第一章 格式法则</div>
+        <ul><li>Title ≤30、Subtitle ≤30、Keywords ≤100 字符。</li><li>Keywords 逗号分隔，不加空格。三处不重复。</li></ul>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">第二章 高阶技巧</div>
+        <ul><li>拆词法、免费关键词、单数形式。</li><li>本地化 Hack：适度加入 usa、wifi 等。</li></ul>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">第三章 避坑指南</div>
+        <ul><li>严禁竞品品牌名。不填 App、iPhone、类别名、开发者名。</li><li>Title 必须自然可读，不堆词。</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var state = { apps: [], filtered: [], combinedKeywords: [], currentTab: 'all', tableSort: { key: null, direction: 'asc' }, tagKeywords: [] };
+
+    function getColumnMap() {
+      return {
+        keyword: (document.getElementById('map-keyword').value || '关键词').trim(),
+        searchIndex: (document.getElementById('map-search-index').value || '搜索指数').trim(),
+        rank: (document.getElementById('map-rank').value || '排名').trim(),
+        popularity: (document.getElementById('map-popularity').value || '流行度').trim(),
+        brand: (document.getElementById('map-brand').value || '').trim(),
+        brandYes: (document.getElementById('map-brand-yes').value || '是').trim()
+      };
+    }
+
+    document.querySelectorAll('.nav-link').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var targetId = btn.getAttribute('data-target');
+        if (targetId) {
+          var el = document.getElementById(targetId);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        document.querySelectorAll('.nav-link').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+      });
+    });
+
+    document.getElementById('btn-open-sop').onclick = function() { document.getElementById('modal-sop').classList.add('show'); };
+    document.getElementById('btn-close-sop').onclick = function() { document.getElementById('modal-sop').classList.remove('show'); };
+    document.getElementById('modal-sop').onclick = function(e) { if (e.target.id === 'modal-sop') e.target.classList.remove('show'); };
+
+    var fileInput = document.getElementById('file-input');
+    document.getElementById('btn-file-select').onclick = function() { fileInput.click(); };
+    document.getElementById('dropzone').ondragover = function(e) { e.preventDefault(); this.classList.add('dragover'); };
+    document.getElementById('dropzone').ondragleave = function() { this.classList.remove('dragover'); };
+    document.getElementById('dropzone').ondrop = function(e) {
+      e.preventDefault();
+      this.classList.remove('dragover');
+      var files = [].slice.call(e.dataTransfer.files || []).filter(function(f) { return /\.xlsx?$/i.test(f.name); });
+      if (files.length) handleFiles(files);
+    };
+    fileInput.onchange = function() {
+      var files = [].slice.call(this.files || []);
+      if (files.length) { handleFiles(files); this.value = ''; }
+    };
+
+    function handleFiles(files) {
+      if (!window.XLSX) { alert('请联网加载 XLSX 库，或本地引用 xlsx.full.min.js'); return; }
+      var colMap = getColumnMap();
+      var apps = [];
+      var processed = 0;
+      files.forEach(function(file) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            var json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            var rows = json.map(function(row) {
+              var keyword = String(row[colMap.keyword] || '').trim();
+              var searchIndex = Number(row[colMap.searchIndex] || 0);
+              var rank = Number(row[colMap.rank] || 999999);
+              var popularity = Number(row[colMap.popularity] || 0);
+              var isBrand = false;
+              if (colMap.brand && String(row[colMap.brand] || '').trim() === colMap.brandYes) isBrand = true;
+              return { keyword: keyword, searchIndex: searchIndex, rank: rank, popularity: popularity, isBrand: isBrand };
+            }).filter(function(r) { return r.keyword; });
+            if (rows.length) apps.push({ name: file.name.replace(/\.xlsx?$/i, ''), rows: rows });
+          } catch (err) { console.error(err); }
+          processed++;
+          if (processed === files.length) {
+            state.apps = state.apps.concat(apps);
+            document.getElementById('imported-list').innerHTML = state.apps.length ? state.apps.map(function(a) { return a.name + ' · ' + a.rows.length + ' 条'; }).join('<br/>') : '暂无数据，请先导入 .xlsx 文件。';
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    document.getElementById('btn-reset-filters').onclick = function() {
+      document.getElementById('filter-search-index').value = 5000;
+      document.getElementById('filter-rank').value = 10;
+      document.getElementById('filter-popularity').value = 5;
+      document.getElementById('filter-contains').value = '';
+      document.getElementById('filter-brand').value = 'all';
+      document.getElementById('filter-sort').value = 'searchIndex-desc';
+    };
+
+    document.getElementById('btn-apply-filters').onclick = function() {
+      if (!state.apps.length) { alert('请先导入至少一个竞品的 .xlsx 数据。'); return; }
+      var minSearch = Number(document.getElementById('filter-search-index').value || 0);
+      var maxRank = Number(document.getElementById('filter-rank').value || Infinity);
+      var minPop = Number(document.getElementById('filter-popularity').value || 0);
+      var containsRaw = (document.getElementById('filter-contains').value || '').toLowerCase().split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+      var brandMode = document.getElementById('filter-brand').value;
+      var sortMode = document.getElementById('filter-sort').value;
+
+      state.filtered = state.apps.map(function(app) {
+        var rows = app.rows.filter(function(row) {
+          if (row.searchIndex < minSearch || row.rank > maxRank || row.popularity < minPop) return false;
+          if (containsRaw.length && !containsRaw.some(function(str) { return row.keyword.toLowerCase().indexOf(str) !== -1; })) return false;
+          if (brandMode === 'nonbrand' && row.isBrand) return false;
+          if (brandMode === 'brand' && !row.isBrand) return false;
+          return true;
+        }).slice();
+        if (sortMode === 'searchIndex-desc') rows.sort(function(a, b) { return (b.searchIndex || 0) - (a.searchIndex || 0); });
+        else if (sortMode === 'rank-asc') rows.sort(function(a, b) { return (a.rank || 999999) - (b.rank || 999999); });
+        else if (sortMode === 'popularity-desc') rows.sort(function(a, b) { return (b.popularity || 0) - (a.popularity || 0); });
+        return { name: app.name, rows: rows };
+      });
+
+      var map = {};
+      state.filtered.forEach(function(app) {
+        app.rows.forEach(function(row) {
+          var k = row.keyword.toLowerCase();
+          if (!map[k]) map[k] = { keyword: row.keyword, searchIndex: row.searchIndex || 0, popularity: row.popularity || 0, rank: row.rank || 999999, apps: [] };
+          map[k].searchIndex = Math.max(map[k].searchIndex, row.searchIndex || 0);
+          map[k].popularity = Math.max(map[k].popularity, row.popularity || 0);
+          map[k].rank = Math.min(map[k].rank, row.rank || 999999);
+          if (map[k].apps.indexOf(app.name) === -1) map[k].apps.push(app.name);
+        });
+      });
+      state.combinedKeywords = Object.keys(map).map(function(k) { return map[k]; });
+      state.currentTab = 'all';
+      renderResults();
+    };
+
+    function renderResults() {
+      var total = state.filtered.reduce(function(sum, app) { return sum + app.rows.length; }, 0);
+      var tabsEl = document.getElementById('tabs');
+      var wrapper = document.getElementById('results-table-wrapper');
+      var noRes = document.getElementById('no-results');
+      var kwList = document.getElementById('keyword-list');
+
+      if (!total) {
+        wrapper.style.display = 'none';
+        wrapper.innerHTML = '';
+        noRes.style.display = 'block';
+        noRes.textContent = '请先导入数据并应用筛选。';
+        kwList.innerHTML = '';
+        return;
+      }
+      noRes.style.display = 'none';
+
+      tabsEl.innerHTML = '';
+      var allBtn = document.createElement('button');
+      allBtn.className = 'tab' + (state.currentTab === 'all' ? ' active' : '');
+      allBtn.textContent = '全部竞品 (' + total + ')';
+      allBtn.onclick = function() { state.currentTab = 'all'; renderResults(); };
+      tabsEl.appendChild(allBtn);
+      state.filtered.forEach(function(app) {
+        var tb = document.createElement('button');
+        tb.className = 'tab' + (state.currentTab === app.name ? ' active' : '');
+        tb.textContent = app.name + ' (' + app.rows.length + ')';
+        tb.onclick = function() { state.currentTab = app.name; renderResults(); };
+        tabsEl.appendChild(tb);
+      });
+
+      var rowsToShow = [];
+      if (state.currentTab === 'all') state.filtered.forEach(function(app) { app.rows.forEach(function(r) { rowsToShow.push({ r: r, app: app.name }); }); });
+      else { var app = state.filtered.filter(function(a) { return a.name === state.currentTab; })[0]; if (app) app.rows.forEach(function(r) { rowsToShow.push({ r: r, app: app.name }); }); }
+
+      if (state.tableSort.key) {
+        var key = state.tableSort.key, dir = state.tableSort.direction;
+        rowsToShow.sort(function(a, b) {
+          var ra = a.r, rb = b.r;
+          if (key === 'keyword') { var ka = (ra.keyword || '').toLowerCase(), kb = (rb.keyword || '').toLowerCase(); return dir === 'asc' ? (ka < kb ? -1 : 1) : (ka > kb ? -1 : 1); }
+          var va = Number(ra[key]) || 0, vb = Number(rb[key]) || 0;
+          return dir === 'asc' ? va - vb : vb - va;
+        });
+      }
+
+      var table = '<table><thead><tr><th class="sortable" data-key="keyword">关键词</th><th class="sortable" data-key="searchIndex">搜索指数</th><th class="sortable" data-key="rank">排名</th><th class="sortable" data-key="popularity">流行度</th><th>竞品</th></tr></thead><tbody>';
+      rowsToShow.forEach(function(x) {
+        table += '<tr><td class="keyword-cell">' + x.r.keyword + '</td><td>' + (x.r.searchIndex || 0) + '</td><td>' + (x.r.rank || '-') + '</td><td>' + (x.r.popularity || 0) + '</td><td>' + x.app + '</td></tr>';
+      });
+      table += '</tbody></table>';
+      wrapper.innerHTML = table;
+      wrapper.style.display = 'block';
+
+      wrapper.querySelectorAll('th.sortable').forEach(function(th) {
+        var key = th.getAttribute('data-key');
+        th.onclick = function() {
+          state.tableSort.key = key;
+          state.tableSort.direction = (state.tableSort.key === key && state.tableSort.direction === 'asc') ? 'desc' : 'asc';
+          renderResults();
+        };
+      });
+
+      kwList.innerHTML = '';
+      state.combinedKeywords.sort(function(a, b) { return (b.searchIndex || 0) - (a.searchIndex || 0); }).forEach(function(item) {
+        var chip = document.createElement('span');
+        chip.className = 'keyword-chip';
+        chip.textContent = item.keyword;
+        chip.title = '搜索指数 ' + item.searchIndex + '，流行度 ' + item.popularity + '，排名 ' + item.rank + '，竞品 ' + item.apps.join(', ');
+        chip.onclick = function() { navigator.clipboard.writeText(item.keyword); chip.style.borderColor = 'var(--success)'; setTimeout(function() { chip.style.borderColor = ''; }, 600); };
+        kwList.appendChild(chip);
+      });
+    }
+
+    document.getElementById('input-title').oninput = function() {
+      var n = this.value.length;
+      document.getElementById('counter-title-text').textContent = n + ' / 30';
+      document.getElementById('counter-title-bar').style.width = Math.min(100, n / 30 * 100) + '%';
+    };
+    document.getElementById('input-subtitle').oninput = function() {
+      var n = this.value.length;
+      document.getElementById('counter-subtitle-text').textContent = n + ' / 30';
+      document.getElementById('counter-subtitle-bar').style.width = Math.min(100, n / 30 * 100) + '%';
+    };
+
+    document.getElementById('btn-generate-copy').onclick = function() {
+      var title = document.getElementById('input-title').value.trim();
+      var subtitle = document.getElementById('input-subtitle').value.trim();
+      document.getElementById('output-title').textContent = title;
+      document.getElementById('output-subtitle').textContent = subtitle;
+
+      var banned = {};
+      (document.getElementById('input-banned').value || '').split(',').concat(['app','iphone','ipad','ios','android','game','social','official','best']).forEach(function(w) { banned[w.trim().toLowerCase()] = true; });
+      function splitWords(t) { return (t || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean); }
+      var inTitleSub = {};
+      splitWords(title).concat(splitWords(subtitle)).forEach(function(w) { inTitleSub[w] = true; });
+
+      var candidates = {};
+      state.combinedKeywords.forEach(function(item) {
+        splitWords(item.keyword).forEach(function(w) {
+          if (!banned[w] && !inTitleSub[w] && w.length > 1) candidates[w] = (candidates[w] || 0) + (item.searchIndex || 0) / 1000 + (item.popularity || 0);
+        });
+      });
+      (document.getElementById('input-extra-keywords').value || '').split(',').forEach(function(w) {
+        splitWords(w).forEach(function(p) { if (!banned[p] && !inTitleSub[p] && p.length > 1) candidates[p] = (candidates[p] || 0) + 10; });
+      });
+
+      var words = Object.keys(candidates).sort(function(a, b) { return (candidates[b] || 0) - (candidates[a] || 0); });
+      var tags = [];
+      var len = 0;
+      words.forEach(function(w) {
+        var add = (tags.length ? ',' : '') + w;
+        if (len + add.length <= 100) { tags.push(w); len += add.length; }
+      });
+      state.tagKeywords = tags.length ? tags : (words[0] ? [words[0]] : []);
+      renderTags();
+    };
+
+    function renderTags() {
+      var list = document.getElementById('tag-list');
+      list.innerHTML = '';
+      state.tagKeywords.forEach(function(word, i) {
+        var el = document.createElement('span');
+        el.className = 'tag';
+        el.innerHTML = word + ' <span class="tag-remove" data-i="' + i + '">×</span>';
+        list.appendChild(el);
+      });
+      list.onclick = function(e) {
+        if (e.target.classList.contains('tag-remove')) {
+          state.tagKeywords.splice(Number(e.target.getAttribute('data-i')), 1);
+          renderTags();
+        }
+      };
+      var str = state.tagKeywords.join(',');
+      document.getElementById('keywords-len').textContent = str.length;
+      document.getElementById('keywords-progress-bar').style.width = Math.min(100, str.length) + '%';
+    }
+
+    document.getElementById('btn-add-tag').onclick = function() {
+      var v = (document.getElementById('tag-input').value || '').trim().toLowerCase().replace(/\s+/g, '');
+      if (v) { state.tagKeywords.push(v); document.getElementById('tag-input').value = ''; renderTags(); }
+    };
+    document.getElementById('tag-input').onkeydown = function(e) { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-tag').click(); } };
+    document.getElementById('btn-sort-tags').onclick = function() { state.tagKeywords.sort(function(a, b) { return a.length - b.length; }); renderTags(); };
+    document.getElementById('btn-dedupe-tags').onclick = function() { state.tagKeywords = state.tagKeywords.filter(function(w, i, arr) { return arr.indexOf(w) === i; }); renderTags(); };
+    document.getElementById('btn-clear-tags').onclick = function() { if (confirm('确定清空？')) { state.tagKeywords = []; renderTags(); } };
+    document.getElementById('btn-copy-keywords').onclick = function() {
+      navigator.clipboard.writeText(state.tagKeywords.join(',')).then(function() {
+        var btn = document.getElementById('btn-copy-keywords');
+        btn.textContent = '已复制';
+        setTimeout(function() { btn.textContent = '复制 Keywords'; }, 700);
+      });
+    };
+
+    document.querySelectorAll('button[data-copy-target]').forEach(function(btn) {
+      btn.onclick = function() {
+        var el = document.getElementById(btn.getAttribute('data-copy-target'));
+        if (el) navigator.clipboard.writeText(el.textContent || '').then(function() { btn.textContent = '已复制'; setTimeout(function() { btn.textContent = '复制'; }, 700); });
+      };
+    });
+
+    renderTags();
+  </script>
+</body>
+</html>
