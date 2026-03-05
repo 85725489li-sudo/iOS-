@@ -1516,35 +1516,36 @@
             const sheetName = wb.SheetNames[0];
             const sheet = wb.Sheets[sheetName];
 
-            // 点点数据：第1行是标题，第2行是表头，第3行起是数据
-            // 用 header:1 读取原始二维数组，自动检测表头行
+            // 点点数据格式：行1=标题行，行2=表头，行3起=数据
             const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
-            // 找到包含「关键词」的那一行作为表头（兼容不同格式）
-            let headerRowIdx = 0;
-            for (let i = 0; i < Math.min(5, raw.length); i++) {
-              const rowStr = raw[i].join(',');
-              if (rowStr.includes('关键词') || rowStr.includes('keyword') || rowStr.includes('Keyword')) {
+            // 扫描前8行，找第一个包含「关键词」单元格的行作为表头
+            let headerRowIdx = 1; // 默认第2行（index=1）
+            for (let i = 0; i < Math.min(8, raw.length); i++) {
+              if (raw[i].some(cell => String(cell).trim() === '关键词')) {
                 headerRowIdx = i;
                 break;
               }
             }
             const headers = raw[headerRowIdx].map(h => String(h).trim());
-            const dataRows = raw.slice(headerRowIdx + 1);
+            const dataRows = raw.slice(headerRowIdx + 1).filter(r => r.some(c => c !== ''));
 
-            // 动态列名匹配（模糊匹配，兼容表头细微差异）
-            function findCol(candidates) {
-              for (const c of candidates) {
-                const idx = headers.findIndex(h => h.includes(c));
-                if (idx >= 0) return headers[idx];
+            // 精确列名查找（先精确匹配，再包含匹配）
+            function findColName(exactNames, fuzzyNames) {
+              for (const n of exactNames) {
+                if (headers.includes(n)) return n;
+              }
+              for (const n of fuzzyNames) {
+                const found = headers.find(h => h.includes(n));
+                if (found) return found;
               }
               return null;
             }
-            const kwCol       = findCol([colMap.keyword, '关键词', 'keyword', 'Keyword']) || headers[0];
-            const idxCol      = findCol([colMap.searchIndex, '搜索指数', '搜索量', 'search']) || headers[1];
-            const rankCol     = findCol([colMap.rank, '排名', 'rank', 'Rank']) || headers[2];
-            const popCol      = findCol([colMap.popularity, '流行度', '热度', 'popular']) || headers[3];
-            const brandCol    = findCol([colMap.brand, '品牌词', 'brand']) || null;
+            const kwCol    = findColName(['关键词'], ['keyword', 'Keyword']) || headers[0];
+            const idxCol   = findColName(['搜索指数'], ['搜索量', 'search']) || headers[4];
+            const rankCol  = findColName(['排名'], ['rank', 'Rank']) || headers[2];
+            const popCol   = findColName(['流行度'], ['热度', 'popular']) || headers[5];
+            const brandCol = findColName(['品牌词'], ['brand']) || null;
 
             const rows = dataRows.map(rawRow => {
               const row = {};
