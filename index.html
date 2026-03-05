@@ -1589,6 +1589,7 @@
               });
               renderImportedApps();
               setImportStatus('ok', `已导入 ${state.apps.length} 个竞品`);
+              console.log('[handleFiles] 导入完成，竞品数:', state.apps.length, '，首个竞品行数:', state.apps[0]?.rows?.length);
             }
           }
         };
@@ -1644,6 +1645,7 @@
     btnApplyFilters.addEventListener('click', applyFilters);
 
     function applyFilters() {
+      console.log('[applyFilters] 开始，state.apps:', state.apps.length, '个竞品');
       if (!state.apps.length) {
         alert('请先导入至少一个竞品的 .xlsx 关键词数据。');
         return;
@@ -1741,6 +1743,7 @@
 
     function renderResults() {
       const total = state.filtered.reduce((sum, app) => sum + app.rows.length, 0);
+      console.log('[renderResults] total:', total, 'filtered apps:', state.filtered.length);
       if (!total) {
         summaryCount.textContent = '当前筛选下暂无符合条件的关键词';
         resultsWrapper.style.display = 'none';
